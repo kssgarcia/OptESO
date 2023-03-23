@@ -6,8 +6,11 @@ import solidspy.postprocesor as pos
 import solidspy.assemutil as ass
 import solidspy.solutil as sol
 
-def solids(plot_contours=True, compute_strains=False, data=[]):
+def solidsy(nodes, mats, elements, loads):
+    plot_contours=True
+    compute_strains=False
     """
+
     Run a complete workflow for a Finite Element Analysis
 
     Parameters
@@ -33,12 +36,7 @@ def solids(plot_contours=True, compute_strains=False, data=[]):
 
     """
     start_time = datetime.now()
-    echo = False
 
-    # Pre-processing
-    nodes, mats, elements, loads = data
-    if echo:
-        pre.echomod(nodes, mats, elements, loads, folder=folder)
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], elements)
     print("Number of nodes: {}".format(nodes.shape[0]))
     print("Number of elements: {}".format(elements.shape[0]))
