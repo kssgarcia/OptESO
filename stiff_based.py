@@ -165,5 +165,3 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 
 # %%
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
-
-
