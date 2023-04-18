@@ -2,7 +2,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from opt_beam import *
 from beams import *
 
 # Solidspy 1.1.0
@@ -121,14 +120,139 @@ def postprocessing(nodes, mats, els, bc_array, disp):
     
     return disp_complete, strain_nodes, stress_nodes
 
+def protect_els(els, loads, BC):
+    """
+    Compute an mask array with the elements that don't must be deleted.
+    
+    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
+    
+    Parameters
+    ----------
+    els : ndarray
+        Array with models elements
+    loads : ndarray
+        Array with models loads
+    BC : ndarray 
+        Boundary conditions nodes
+        
+    Returns
+    -------
+    mask_els : ndarray 
+        Array with the elements that don't must be deleted.
+    """   
+    mask_els = np.ones_like(els[:,0], dtype=bool)
+    protect_nodes = np.hstack((loads[:,0], BC)).astype(int)
+    protect_index = None
+    for p in protect_nodes:
+        protect_index = np.argwhere(els[:, -4:] == p)[:,0]
+        mask_els[protect_index] = False
+        
+    return mask_els
+    
+def del_node(nodes, els):
+    """
+    Retricts nodes dof that aren't been used.
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    els : ndarray
+        Array with models elements
 
+    Returns
+    -------
+    """   
+    n_nodes = nodes.shape[0]
+    for n in range(n_nodes):
+        if n not in els[:, -4:]:
+            nodes[n, -2:] = -1
+
+def sensi_el(nodes, mats, els, UC):
+    """
+    Calculate the sensitivity number for each element.
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    UC : ndarray
+        Displacements at nodes
+
+    Returns
+    -------
+    sensi_number : ndarray
+        Sensitivity number for each element.
+    """   
+    sensi_number = []
+    for el in range(len(els)):
+        params = tuple(mats[els[el, 2], :])
+        elcoor = nodes[els[el, -4:], 1:3]
+        kloc, _ = uel.elast_quad4(elcoor, params)
+
+        node_el = els[el, -4:]
+        U_el = UC[node_el]
+        U_el = np.reshape(U_el, (8,1))
+        a_i = U_el.T.dot(kloc.dot(U_el))[0,0]
+        sensi_number.append(a_i)
+    sensi_number = np.array(sensi_number)
+
+    return sensi_number
+
+def stiff_local(els, mats, nodes, el):
+    params = tuple(mats[els[el, 2], :])
+    print(params)
+    elcoor = nodes[els[el, -4:], 1:3]
+    kloc, _ = uel.elast_quad4(elcoor, params)
+
+    assem_op, _, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    
+    kloc_t, _ = ass.retriever(els, mats, nodes, el, uel=None)
+    print(kloc_t)
+
+    el_nodes = els[el, -4:]
+    K_g =  np.zeros((neq, neq))
+    for c, col in enumerate(assem_op[0]):
+        for r, row in enumerate(assem_op[0]):
+            K_g[row, col] = kloc[r, c]
+            
+
+    return K_g
+
+def stiff_global(nodes, mats, els):
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+
+    # System assembly
+    stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
+
+    return stiff_mat
 # %%
-length = 10
-height = 24
-nx = 20
-ny= 40
-nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
+nodes, mats, els, loads, BC = beam_2(L=10, H=24, nx=20, ny=40)
 elsI,nodesI = np.copy(els), np.copy(nodes)
+
+#%% Test local stiffness matrix
+kloc = stiff_local(els, mats, nodes, 0)
+stiff_g = stiff_global(nodes, mats, els)
+residual = stiff_g - kloc
+
+#%% Test global stiffness matrix
+mask_test = np.zeros(els.shape[0], dtype=bool)
+mask_test[0] = True
+els = np.delete(els, mask_test, 0)
+stiff_g = stiff_global(nodes, mats, els)
+
+#%%
+a = (stiff_g == kloc)
+print(1640 * 1640)
+print(a[a==True].sum())
+print(np.invert(a).sum())
+print(stiff_g.sum())
+print(residual.sum())
+#print(np.allclose(stiff_g, residual))
 
 # %%
 IBC, UG = preprocessing(nodes, mats, els, loads)
@@ -138,10 +262,10 @@ UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 niter = 50
 RR = 0.01
 ER = 0.005
-V_opt = volume(els, length, height, nx, ny) * 0.50
+V_opt = int(len(els) * 0.50)
 ELS = None
 for _ in range(niter):
-    if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: 
+    if not is_equilibrium(nodes, mats, els, loads) or len(els) < V_opt: 
         print('Is not equilibrium')
         break
     
@@ -165,3 +289,4 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 
 # %%
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
+
