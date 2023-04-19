@@ -42,7 +42,7 @@ def beam_1(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
     nodes[:, 2] = y
-    mask = (x==L/2)
+    mask = (x == L/2)
     nodes[mask, 3:] = -1
 
     mask_loads = (x == -L/2) & (y < H/6) & (y > -H/6)
@@ -104,6 +104,5 @@ def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     loads = np.zeros((len(loads_nodes), 3))
     loads[:, 0] = loads_nodes
     loads[:, 2] = F
-    #look here
     BC = nodes[mask, 0]
     return nodes, mats, els, loads, BC

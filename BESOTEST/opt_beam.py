@@ -19,12 +19,12 @@ def protect_els(els, nels, loads, BC):
     mask_els : ndarray 
         Array with the elements that don't must be deleted.
     """   
-    mask_els = np.ones(nels, dtype=bool)
+    mask_els = np.zeros(nels, dtype=bool)
     protect_nodes = np.hstack((loads[:,0], BC)).astype(int)
     protect_index = None
     for p in protect_nodes:
         protect_index = np.argwhere(els[:, -4:] == p)[:,0]
-        mask_els[els[protect_index,0]] = False
+        mask_els[els[protect_index,0]] = True
         
     return mask_els
 

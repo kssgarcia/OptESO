@@ -198,11 +198,11 @@ def sensitivity_els(nodes, sensi_nodes, centers, r_min):
     return sensi_els
     
 # %%
-length = 10
-height = 24
-nx = 20
-ny= 40
-nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
+length = 8
+height = 5
+nx = 50
+ny= 30
+nodes, mats, els, loads, BC = beam_1(L=length, H=height, nx=nx, ny=ny)
 
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
@@ -213,10 +213,10 @@ UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 # %%
 niter = 80
 RR = 0.01 #
-ER = 0.01 # Evolutinary volume ratio
+ER = 0.05 # Evolutinary volume ratio
 
 
-r_min = 1.0
+r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) 
 centers = center_els(nodes, els)
 adj_nodes = adjacency_nodes(nodes, els)
 
@@ -248,10 +248,9 @@ for _ in range(niter):
     els_k = mask.sum()*V_k/V
     alpha_del = sensi_sort[int(els_k)]
 
-
     mask = sensi_number > alpha_del
     mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC)
-    mask *= mask_els
+    mask = np.bitwise_or(mask, mask_els)
     ELS = els_del
     
     del_node(nodes, els[mask])
