@@ -1,7 +1,7 @@
 import numpy as np
 import solidspy.uelutil as uel 
 
-def protect_els(els, loads, BC):
+def protect_els(els, nels, loads, BC):
     """
     Compute an mask array with the elements that don't must be deleted.
     
@@ -19,12 +19,12 @@ def protect_els(els, loads, BC):
     mask_els : ndarray 
         Array with the elements that don't must be deleted.
     """   
-    mask_els = np.ones_like(els[:,0], dtype=bool)
+    mask_els = np.ones(nels, dtype=bool)
     protect_nodes = np.hstack((loads[:,0], BC)).astype(int)
     protect_index = None
     for p in protect_nodes:
         protect_index = np.argwhere(els[:, -4:] == p)[:,0]
-        mask_els[protect_index] = False
+        mask_els[els[protect_index,0]] = False
         
     return mask_els
 
@@ -75,7 +75,7 @@ def volume(els, length, height, nx, ny):
 
     return V
 
-def sensi_el(nodes, mats, els, UC):
+def sensi_el(nodes, mats, els, mask, UC):
     """
     Calculate the sensitivity number for each element.
     
@@ -97,6 +97,9 @@ def sensi_el(nodes, mats, els, UC):
     """   
     sensi_number = []
     for el in range(len(els)):
+        if mask[el] == False:
+            sensi_number.append(0)
+            continue
         params = tuple(mats[els[el, 2], :])
         elcoor = nodes[els[el, -4:], 1:3]
         kloc, _ = uel.elast_quad4(elcoor, params)

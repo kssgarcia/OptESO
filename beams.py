@@ -42,14 +42,15 @@ def beam_1(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
     nodes[:, 2] = y
-    nodes[x==L/2, 3] = -1
-    nodes[x==L/2, 4] = -1    
+    mask = (x==L/2)
+    nodes[mask, 3:] = -1
+
     mask_loads = (x == -L/2) & (y < H/6) & (y > -H/6)
     loads_nodes = nodes[mask_loads, 0]
     loads = np.zeros((len(loads_nodes), 3))
     loads[:, 0] = loads_nodes
     loads[:, 2] = F
-    BC = nodes[mask_loads, 0]
+    BC = nodes[mask, 0]
     return nodes, mats, els, loads, BC
 
 def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
@@ -93,12 +94,10 @@ def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
     nodes[:, 2] = y
-    mask_1 = (x == L/2) & (y < H/2.5)
-    mask_2 = (x == L/2) & (y > -H/2.5)
-    nodes[mask_1, 3] = -1
-    nodes[mask_1, 4] = -1
-    nodes[mask_2, 3] = -1
-    nodes[mask_2, 4] = -1
+    mask_1 = (x == L/2) & (y > H/2.5)
+    mask_2 = (x == L/2) & (y < -H/2.5)
+    mask = np.bitwise_or(mask_1, mask_2)
+    nodes[mask, 3:] = -1
 
     mask_loads = (x == -L/2) & (y < H/6) & (y > -H/6)
     loads_nodes = nodes[mask_loads, 0]
@@ -106,5 +105,5 @@ def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     loads[:, 0] = loads_nodes
     loads[:, 2] = F
     #look here
-    BC = nodes[mask_loads, 0]
+    BC = nodes[mask, 0]
     return nodes, mats, els, loads, BC

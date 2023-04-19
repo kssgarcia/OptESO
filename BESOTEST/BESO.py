@@ -73,6 +73,7 @@ def preprocessing(nodes, mats, els, loads):
     """   
 
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    print("Number of elements: {}".format(els.shape[0]))
 
     # System assembly
     stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
@@ -121,7 +122,6 @@ def postprocessing(nodes, mats, els, bc_array, disp):
     
     return disp_complete, strain_nodes, stress_nodes
 
-#%% Adjacency matrix
 
 def adjacency_nodes(nodes, els):
     """
@@ -170,82 +170,100 @@ def center_els(nodes, els):
 
     return centers
 
-def sensitivity_nodes(nodes, adj, centers, sensi_els):
-    n_sensi = []
+def sensitivity_nodes(nodes, adj_nodes_nodes, centers, sensi_els):
+    sensi_nodes = []
     for n in nodes:
-        connected_els = adj[int(n[0])]
+        connected_els = adj_nodes[int(n[0])]
         if len(connected_els) > 1:
-            coord = n[1:3]
-            r_ij = np.array([np.linalg.norm(c) for c in coord - centers[connected_els]]) # We can remove this line and just use a constant because the distance is always the same
+            delta = n[1:3] - centers[connected_els]
+            r_ij = np.linalg.norm(delta, axis=1) # We can remove this line and just use a constant because the distance is always the same
             w_i = 1/(len(connected_els) - 1) * (1 - r_ij/r_ij.sum())
             sensi = (w_i * sensi_els[connected_els]).sum(axis=0)
         else:
             sensi = sensi_els[connected_els[0]]
-        n_sensi.append(sensi)
-    return n_sensi
+        sensi_nodes.append(sensi)
+    sensi_nodes = np.array(sensi_nodes)
+    return sensi_nodes
 
-def sensitivity_els(sensi_nodes, centers, r_min):
+def sensitivity_els(nodes, sensi_nodes, centers, r_min):
     sensi_els = []
     for i, c in enumerate(centers):
-        delta = c-centers
-        r_ij = np.array([np.linalg.norm(d) for d in delta])
-
+        delta = nodes[:,1:3]-c
+        r_ij = np.linalg.norm(delta, axis=1)
+        omega_i = (r_ij <= r_min)
+        w = r_min - r_ij[omega_i]
+        sensi_els.append((w*sensi_nodes[omega_i]).sum()/w.sum())
+        
+    sensi_els = np.array(sensi_els)
     return sensi_els
     
-#%%
-centers = center_els(nodes, els)
-adj_nodes = adjacency_nodes(nodes, els)
-
-sensi_nodes = sensitivity_nodes(nodes, adj, centers, sensi_I)
-r_min = 0.2
-sensi_els = sensitivity_els(sensi_nodes, centers, r_min)
 # %%
 length = 10
 height = 24
 nx = 20
 ny= 40
 nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
-elsI,nodesI = np.copy(els), np.copy(nodes)
-mask_del = np.ones(els.shape[0], dtype=bool)
 
-# %%
+
+elsI,nodesI = np.copy(els), np.copy(nodes)
+
 IBC, UG = preprocessing(nodes, mats, els, loads)
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
-sensi_I = sensi_el(nodes, mats, els, UCI)
 
 # %%
-niter = 50
-RR = 0.01
-ER = 0.005
-r_min = 0.01
+niter = 80
+RR = 0.01 #
+ER = 0.01 # Evolutinary volume ratio
 
-MASK_DEL = np.zeros(els.shape[0], dtype=bool)
-sensi_I = sensi_el(nodes, mats, els, UCI)
+
+r_min = 1.0
+centers = center_els(nodes, els)
+adj_nodes = adjacency_nodes(nodes, els)
 
 V_opt = volume(els, length, height, nx, ny) * 0.50
 ELS = None
+mask = np.ones(els.shape[0], dtype=bool)
+sensi_I = sensi_el(nodes, mats, els, mask, UCI)
 
 for _ in range(niter):
-    if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: 
+    els_del = els[mask].copy()
+
+    V = volume(els_del, length, height, nx, ny)
+    if not is_equilibrium(nodes, mats, els_del, loads) or V < V_opt: 
         print('Is not equilibrium')
         break
     
-    IBC, UG = preprocessing(nodes, mats, els, loads)
-    UC, E_nodes, S_nodes = postprocessing(nodes, mats, els, IBC, UG)
+    IBC, UG = preprocessing(nodes, mats, els_del, loads)
+    UC, E_nodes, S_nodes = postprocessing(nodes, mats, els_del, IBC, UG)
 
-    sensi_number = sensi_el(nodes, mats, els, UC)
-    # Filter of nodes 
-    # Filter of elements
-    mask_del = sensi_number < RR
-    mask_els = protect_els(els, loads, BC)
-    mask_del *= mask_els
-    ELS = els
+    sensi_e = sensi_el(nodes, mats, els, mask, UC)
+
+    sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) #3.4
+    sensi_number = sensitivity_els(nodes, sensi_nodes, centers, r_min) #3.6
+    sensi_number = (sensi_number + sensi_I)/2 # 3.8
     
-    els = np.delete(els, mask_del, 0)
-    del_node(nodes, els)
-    RR += ER
-print(RR)
+    sensi_sort = np.sort(sensi_number)[::-1]
 
+    V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
+    els_k = mask.sum()*V_k/V
+    alpha_del = sensi_sort[int(els_k)]
+
+
+    mask = sensi_number > alpha_del
+    mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC)
+    mask *= mask_els
+    ELS = els_del
+    
+    del_node(nodes, els[mask])
+
+    #RR += ER 
+    sensi_I = sensi_number
+
+#%%
+mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC)
+mask *= mask_els
+print(mask.sum())
+print(els.shape)
 # %%
 pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 
