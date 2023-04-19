@@ -123,10 +123,10 @@ def postprocessing(nodes, mats, els, bc_array, disp):
 
 
 # %%
-length = 10
-height = 24
-nx = 20
-ny= 40
+length = 16
+height = 10
+nx = 40
+ny= 20
 nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
 elsI,nodesI = np.copy(els), np.copy(nodes)
 

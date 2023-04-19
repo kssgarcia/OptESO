@@ -96,7 +96,7 @@ def sensi_el(nodes, mats, els, mask, UC):
         Sensitivity number for each element.
     """   
     sensi_number = []
-    for el in range(len(els)):
+    for el in range(els.shape[0]):
         if mask[el] == False:
             sensi_number.append(0)
             continue
@@ -107,46 +107,9 @@ def sensi_el(nodes, mats, els, mask, UC):
         node_el = els[el, -4:]
         U_el = UC[node_el]
         U_el = np.reshape(U_el, (8,1))
-        a_i = U_el.T.dot(kloc.dot(U_el))[0,0]
+        a_i = 0.5 * U_el.T.dot(kloc.dot(U_el))[0,0]
         sensi_number.append(a_i)
     sensi_number = np.array(sensi_number)
     sensi_number = sensi_number/sensi_number.max()
 
     return sensi_number
-
-def strain_els(els, E_nodes, S_nodes):
-    """
-    Compute the elements strains and stresses.
-    
-    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
-    
-    Parameters
-    ----------
-    els : ndarray
-        Array with models elements
-    E_nodes : ndarray
-        Strains at nodes.
-    S_nodes : ndarray
-        Stresses at nodes.
-        
-    Returns
-    -------
-    E_els : ndarray (nnodes, 3)
-        Strains at elements.
-    S_els : ndarray (nnodes, 3)
-        Stresses at elements.
-    """   
-    
-    E_els = []
-    S_els = []
-    for el in els:
-        strain_nodes = np.take(E_nodes, list(el[3:]), 0)
-        stress_nodes = np.take(S_nodes, list(el[3:]), 0)
-        strain_elemt = (strain_nodes[0] + strain_nodes[1] + strain_nodes[2] + strain_nodes[3]) / 4
-        stress_elemt = (stress_nodes[0] + stress_nodes[1] + stress_nodes[2] + stress_nodes[3]) / 4
-        E_els.append(strain_elemt)
-        S_els.append(stress_elemt)
-    E_els = np.array(E_els)
-    S_els = np.array(S_els)
-    
-    return E_els, S_els

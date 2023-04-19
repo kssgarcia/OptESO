@@ -84,7 +84,7 @@ def preprocessing(nodes, mats, els, loads):
     if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(),
                        rhs_vec/stiff_mat.max()):
         print("The system is not in equilibrium!")
-    return bc_array, disp
+    return bc_array, disp, rhs_vec
 
 
 def postprocessing(nodes, mats, els, bc_array, disp):
@@ -170,14 +170,14 @@ def center_els(nodes, els):
 
     return centers
 
-def sensitivity_nodes(nodes, adj_nodes_nodes, centers, sensi_els):
+def sensitivity_nodes(nodes, adj_nodes, centers, sensi_els):
     sensi_nodes = []
     for n in nodes:
         connected_els = adj_nodes[int(n[0])]
-        if len(connected_els) > 1:
-            delta = n[1:3] - centers[connected_els]
+        if connected_els.shape[0] > 1:
+            delta = centers[connected_els] - n[1:3]
             r_ij = np.linalg.norm(delta, axis=1) # We can remove this line and just use a constant because the distance is always the same
-            w_i = 1/(len(connected_els) - 1) * (1 - r_ij/r_ij.sum())
+            w_i = 1/(connected_els.shape[0] - 1) * (1 - r_ij/r_ij.sum())
             sensi = (w_i * sensi_els[connected_els]).sum(axis=0)
         else:
             sensi = sensi_els[connected_els[0]]
@@ -196,64 +196,85 @@ def sensitivity_els(nodes, sensi_nodes, centers, r_min):
         
     sensi_els = np.array(sensi_els)
     return sensi_els
+
+def cal_error(C, N, k):
+    for n in range(N):
+        t_1 = C[k+1-i]
+        t_2 = C[k+1-i-N]
+    error = (t_1 - t_2)/t_1
+    return error
     
 # %%
 length = 8
 height = 5
-nx = 50
+nx = 40
 ny= 30
-nodes, mats, els, loads, BC = beam_1(L=length, H=height, nx=nx, ny=ny)
+nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
 
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
 
-IBC, UG = preprocessing(nodes, mats, els, loads)
+IBC, UG, rhs_vec = preprocessing(nodes, mats, els, loads)
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 
 # %%
-niter = 80
+niter = 50
 RR = 0.01 #
 ER = 0.05 # Evolutinary volume ratio
+AR_max = 0.05
 
 
 r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) 
 centers = center_els(nodes, els)
 adj_nodes = adjacency_nodes(nodes, els)
 
-V_opt = volume(els, length, height, nx, ny) * 0.50
+V_opt = volume(els, length, height, nx, ny) * 0.30
 ELS = None
 mask = np.ones(els.shape[0], dtype=bool)
-sensi_I = sensi_el(nodes, mats, els, mask, UCI)
+sensi_I = None
 
-for _ in range(niter):
+for i in range(10):
     els_del = els[mask].copy()
-
     V = volume(els_del, length, height, nx, ny)
-    if not is_equilibrium(nodes, mats, els_del, loads) or V < V_opt: 
+    if not is_equilibrium(nodes, mats, els_del, loads): 
         print('Is not equilibrium')
         break
     
-    IBC, UG = preprocessing(nodes, mats, els_del, loads)
+    # FEW
+    IBC, UG, rhs_vec = preprocessing(nodes, mats, els_del, loads)
     UC, E_nodes, S_nodes = postprocessing(nodes, mats, els_del, IBC, UG)
 
+    # Sensitivity filter
     sensi_e = sensi_el(nodes, mats, els, mask, UC)
-
     sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) #3.4
     sensi_number = sensitivity_els(nodes, sensi_nodes, centers, r_min) #3.6
-    sensi_number = (sensi_number + sensi_I)/2 # 3.8
-    
-    sensi_sort = np.sort(sensi_number)[::-1]
 
-    V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
-    els_k = mask.sum()*V_k/V
+    # Averaging sensitivity
+    if i > 0:
+        sensi_number = (sensi_number + sensi_I)/2 # 3.8
+    
+
+    # Next target volume
+    if np.isclose(V, V_opt, rtol=1, atol=1):
+        V_k = V_opt
+    else:
+        V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
+
+    # Remove/add threshold
+    sensi_sort = np.sort(sensi_number)[::-1]
+    els_k = els_del.shape[0]*V_k/V
     alpha_del = sensi_sort[int(els_k)]
 
     mask = sensi_number > alpha_del
     mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC)
     mask = np.bitwise_or(mask, mask_els)
     ELS = els_del
-    
     del_node(nodes, els[mask])
+
+    C = 0.5*rhs_vec.T*UG
+    print(C.sum())
+    error = cal_error(C, 5, i)
+    print(error)
 
     #RR += ER 
     sensi_I = sensi_number

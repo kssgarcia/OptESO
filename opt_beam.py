@@ -104,7 +104,7 @@ def sensi_el(nodes, mats, els, UC):
         node_el = els[el, -4:]
         U_el = UC[node_el]
         U_el = np.reshape(U_el, (8,1))
-        a_i = U_el.T.dot(kloc.dot(U_el))[0,0]
+        a_i = 0.5 * U_el.T.dot(kloc.dot(U_el))[0,0]
         sensi_number.append(a_i)
     sensi_number = np.array(sensi_number)
     sensi_number = sensi_number/sensi_number.max()
