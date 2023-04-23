@@ -28,7 +28,7 @@ def protect_els(els, nels, loads, BC):
         
     return mask_els
 
-def del_node(nodes, els):
+def del_node(nodes, els, loads, BC):
     """
     Retricts nodes dof that aren't been used.
     
@@ -42,10 +42,12 @@ def del_node(nodes, els):
     Returns
     -------
     """   
-    n_nodes = nodes.shape[0]
-    for n in range(n_nodes):
+    protect_nodes = np.hstack((loads[:,0], BC)).astype(int)
+    for n in nodes[:,0]:
         if n not in els[:, -4:]:
-            nodes[n, -2:] = -1
+            nodes[int(n), -2:] = -1
+        elif n not in protect_nodes and n in els[:, -4:]:
+            nodes[int(n), -2:] = 0
 
 
 def volume(els, length, height, nx, ny):
