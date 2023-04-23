@@ -71,7 +71,7 @@ def volume(els, length, height, nx, ny):
 
     dy = length / nx
     dx = height / ny
-    V   = dx * dy * els.shape[0]
+    V   = dx * dy * np.ones(els.shape[0])
 
     return V
 

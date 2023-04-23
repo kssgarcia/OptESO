@@ -94,8 +94,8 @@ def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
     nodes[:, 2] = y
-    mask_1 = (x == L/2) & (y > H/2.5)
-    mask_2 = (x == L/2) & (y < -H/2.5)
+    mask_1 = (x == L/2) & (y > H/4)
+    mask_2 = (x == L/2) & (y < -H/4)
     mask = np.bitwise_or(mask_1, mask_2)
     nodes[mask, 3:] = -1
 
