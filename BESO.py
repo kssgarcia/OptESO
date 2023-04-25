@@ -3,17 +3,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from opt_beam import *
 from beams import *
-from ESO_utils import *
+from BESO_utils import *
 # Solidspy 1.1.0
 import solidspy.postprocesor as pos 
 
 np.seterr(divide='ignore', invalid='ignore')
 
 # %%
-length = 8
-height = 5
-nx = 40
-ny= 30
+length = 20
+height = 10
+nx = 50
+ny= 20
 nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
@@ -21,8 +21,8 @@ IBC, UG, _ = preprocessing(nodes, mats, els, loads)
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 
 # %%
-niter = 100
-ER = 0.01
+niter = 200
+ERR = 0.005
 t = 0.01
 
 r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1.5
@@ -30,7 +30,7 @@ adj_nodes = adjacency_nodes(nodes, els)
 centers = center_els(nodes, els)
 
 Vi = volume(els, length, height, nx, ny)
-V_opt = Vi.sum() * 0.30
+V_opt = Vi.sum() * 0.50
 
 # Initialize variables.
 ELS = None
@@ -61,10 +61,10 @@ for i in range(niter):
     sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) #3.4
     sensi_number = sensitivity_filter(nodes, centers, sensi_nodes, r_min) #3.6
 
-    # Avrage the sensitivity numbers to the historical information 
+    # Avarage the sensitivity numbers to the historical information 
     if i > 0: 
         sensi_number = (sensi_number + sensi_I)/2 # 3.8
-    sesni_number = sensi_number/sensi_number.max()
+    sensi_number = sensi_number/sensi_number.max()
 
     # Check if the optimal volume is reached and calculate the next volume
     V_r = False
@@ -73,7 +73,7 @@ for i in range(niter):
         V_r = True
         break
     else:
-        V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
+        V_k = V * (1 + ERR) if V < V_opt else V * (1 - ERR)
 
     # Remove/add threshold
     sensi_sort = np.sort(sensi_number)[::-1]
@@ -104,3 +104,7 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 
 # %%
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
+
+# %%
+fill_plot = np.ones_like(E_nodes)
+plot_mesh(ELS, nodes, UC, E_nodes=fill_plot)

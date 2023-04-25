@@ -1,5 +1,6 @@
 import numpy as np
 import solidspy.uelutil as uel 
+import solidspy.postprocesor as pos 
 
 def protect_els(els, loads, BC):
     """
@@ -147,3 +148,43 @@ def strain_els(els, E_nodes, S_nodes):
     S_els = np.array(S_els)
     
     return E_els, S_els
+
+def plot_mesh(elements, nodes, disp, E_nodes=None):
+    """
+    Plot contours for model
+
+    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
+
+    Parameters
+    ----------
+    nodes : ndarray (float)
+        Array with number and nodes coordinates:
+         `number coordX coordY BCX BCY`
+    elements : ndarray (int)
+        Array with the node number for the nodes that correspond
+        to each element.
+    disp : ndarray (float)
+        Array with the displacements.
+    E_nodes : ndarray (float)
+        Array with strain field in the nodes.
+
+    """
+    # Check for structural elements in the mesh
+    struct_pos = 5 in elements[:, 1] or \
+             6 in elements[:, 1] or \
+             7 in elements[:, 1]
+    if struct_pos:
+        # Still not implemented visualization for structural elements
+        print(disp)
+    else:
+        pos.plot_node_field(disp, nodes, elements, title=[r"$u_x$", r"$u_y$"],
+                        figtitle=["Horizontal displacement",
+                                  "Vertical displacement"])
+        if E_nodes is not None:
+            pos.plot_node_field(E_nodes, nodes, elements,
+                            title=[r"",
+                                   r"",
+                                   r"",],
+                            figtitle=["Strain epsilon-xx",
+                                      "Strain epsilon-yy",
+                                      "Strain gamma-xy"])

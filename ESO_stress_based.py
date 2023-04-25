@@ -1,12 +1,17 @@
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
+
 from opt_beam import *
 from beams import *
 
+# Solidspy 1.1.0
+import solidspy.preprocesor as pre
 import solidspy.assemutil as ass    
 import solidspy.solutil as sol      
 import solidspy.postprocesor as pos 
+import solidspy.uelutil as uel 
+
 np.seterr(divide='ignore', invalid='ignore')
 
 def is_equilibrium(nodes, mats, els, loads):
@@ -33,13 +38,13 @@ def is_equilibrium(nodes, mats, els, loads):
     """   
 
     equil = True
-    DME, IBC, neq = ass.DME(nodes, els)
-    KG = ass.assembler(els, mats, nodes, neq, DME)
-    RHSG = ass.loadasem(loads, IBC, neq)
-    UG = sol.static_sol(KG, RHSG)
-    
-    if not(np.allclose(KG.dot(UG)/KG.max(), RHSG/KG.max())):
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
+    rhs_vec = ass.loadasem(loads, bc_array, neq)
+    disp = sol.static_sol(stiff_mat, rhs_vec)
+    if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(), rhs_vec/stiff_mat.max()):
         equil = False
+
     return equil
     
 def preprocessing(nodes, mats, els, loads):
@@ -61,27 +66,28 @@ def preprocessing(nodes, mats, els, loads):
         
     Returns
     -------
-    IBC : ndarray 
+    bc_array : ndarray 
         Boundary conditions array
-    UG : ndarray 
+    disp : ndarray 
         Static displacement solve.
     """   
 
-    # Pre-processing
-    DME, IBC, neq = ass.DME(nodes, els)
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
     print("Number of elements: {}".format(els.shape[0]))
 
     # System assembly
-    KG = ass.assembler(els, mats, nodes, neq, DME)
-    RHSG = ass.loadasem(loads, IBC, neq)
+    stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
+    rhs_vec = ass.loadasem(loads, bc_array, neq)
 
     # System solution
-    UG = sol.static_sol(KG, RHSG)
-    if not(np.allclose(KG.dot(UG)/KG.max(), RHSG/KG.max())):
+    disp = sol.static_sol(stiff_mat, rhs_vec)
+    if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(),
+                       rhs_vec/stiff_mat.max()):
         print("The system is not in equilibrium!")
-    return IBC, UG
+    return bc_array, disp
 
-def postprocessing(nodes, mats, els, IBC, UG):
+
+def postprocessing(nodes, mats, els, bc_array, disp):
     """
     Compute the nodes displacements, strains and stresses.
     
@@ -102,25 +108,25 @@ def postprocessing(nodes, mats, els, IBC, UG):
         
     Returns
     -------
-    UC : ndarray 
+    disp_complete : ndarray 
         Displacements at elements.
-    E_nodes : ndarray 
+    strain_nodes : ndarray 
         Strains at elements.
-    S_nodes : ndarray 
+    stress_nodes : ndarray 
         Stresses at elements.
     """   
     
-    UC = pos.complete_disp(IBC, nodes, UG)
-    E_nodes, S_nodes = None, None
-    E_nodes, S_nodes = pos.strain_nodes(nodes , els, mats, UC)
+    disp_complete = pos.complete_disp(bc_array, nodes, disp)
+    strain_nodes, stress_nodes = None, None
+    strain_nodes, stress_nodes = pos.strain_nodes(nodes, els, mats, disp_complete)
     
-    return UC, E_nodes, S_nodes
+    return disp_complete, strain_nodes, stress_nodes
 
 # %%
-length = 10
-height = 24
-nx = 20
-ny= 40
+length = 20
+height = 10
+nx = 50
+ny= 20
 nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
 elsI,nodesI = np.copy(els), np.copy(nodes)
 
@@ -129,15 +135,16 @@ IBC, UG = preprocessing(nodes, mats, els, loads)
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 
 # %%
-niter = 40
+niter = 200
 RR = 0.01
-ER = 0.01
-V_opt = volume(els, length, height, nx, ny) * 0.50
+ER = 0.005
+V_opt = volume(els, length, height, nx, ny) * 0.60
 
 ELS = None
 for _ in range(niter):
 
     if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: break
+    ELS = els
     
     IBC, UG = preprocessing(nodes, mats, els, loads)
     UC, E_nodes, S_nodes = postprocessing(nodes, mats, els, IBC, UG)
@@ -147,7 +154,6 @@ for _ in range(niter):
     mask_del = RR_el < RR
     mask_els = protect_els(els, loads, BC)
     mask_del *= mask_els
-    ELS = els
     
     els = np.delete(els, mask_del, 0)
     del_node(nodes, els)
@@ -159,4 +165,6 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 # %%
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
 
-
+# %%
+fill_plot = np.ones_like(E_nodes)
+plot_mesh(ELS, nodes, UC, E_nodes=fill_plot)

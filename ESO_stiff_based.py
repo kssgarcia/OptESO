@@ -73,6 +73,7 @@ def preprocessing(nodes, mats, els, loads):
     """   
 
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    print("Number of elements: {}".format(els.shape[0]))
 
     # System assembly
     stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
@@ -123,9 +124,9 @@ def postprocessing(nodes, mats, els, bc_array, disp):
 
 
 # %%
-length = 16
+length = 20
 height = 10
-nx = 40
+nx = 50
 ny= 20
 nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
 elsI,nodesI = np.copy(els), np.copy(nodes)
@@ -135,7 +136,7 @@ IBC, UG = preprocessing(nodes, mats, els, loads)
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 
 # %%
-niter = 50
+niter = 200
 RR = 0.01
 ER = 0.005
 V_opt = volume(els, length, height, nx, ny) * 0.50
@@ -164,3 +165,7 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 
 # %%
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
+
+# %%
+fill_plot = np.ones_like(E_nodes)
+plot_mesh(ELS, nodes, UC, E_nodes=fill_plot)
