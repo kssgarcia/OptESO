@@ -1,5 +1,6 @@
 Truss
 truss_opt
-__pychache__
 .ipynb_checkpoints
 MyTrussOpt
+__pycache__/
+*.py[cod]
