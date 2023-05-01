@@ -11,10 +11,10 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # %%
 length = 20
-height = 10
+height = 5
 nx = 50
 ny= 20
-nodes, mats, els, loads, BC = beam_2(L=length, H=height, nx=nx, ny=ny)
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=4)
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
 IBC, UG, _ = preprocessing(nodes, mats, els, loads)
