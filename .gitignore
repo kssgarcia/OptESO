@@ -4,3 +4,4 @@ truss_opt
 MyTrussOpt
 __pycache__/
 *.py[cod]
+test
