@@ -1,7 +1,6 @@
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
-from opt_beam import *
 from beams import *
 from BESO_utils import *
 # Solidspy 1.1.0
@@ -106,5 +105,7 @@ pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
 pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
 
 # %%
-fill_plot = np.ones_like(E_nodes)
-plot_mesh(ELS, nodes, UC, E_nodes=fill_plot)
+fill_plot = np.ones(E_nodes.shape[0])
+plt.figure()
+tri = pos.mesh2tri(nodes, ELS)
+plt.tricontourf(tri, fill_plot, cmap='binary');

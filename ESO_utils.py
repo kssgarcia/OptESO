@@ -1,6 +1,116 @@
 import numpy as np
 import solidspy.uelutil as uel 
 import solidspy.postprocesor as pos 
+import solidspy.assemutil as ass    
+import solidspy.solutil as sol      
+
+def is_equilibrium(nodes, mats, els, loads):
+    """
+    Check if the system is in equilibrium
+    
+    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    loads : ndarray
+        Array with models loads
+        
+    Returns
+    -------
+    equil : bool
+        Variable True when the system is in equilibrium and False when it doesn't
+    """   
+
+    equil = True
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
+    rhs_vec = ass.loadasem(loads, bc_array, neq)
+    disp = sol.static_sol(stiff_mat, rhs_vec)
+    if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(), rhs_vec/stiff_mat.max()):
+        equil = False
+
+    return equil
+    
+def preprocessing(nodes, mats, els, loads):
+    """
+    Compute IBC matrix and the static solve.
+    
+    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    loads : ndarray
+        Array with models loads
+        
+    Returns
+    -------
+    bc_array : ndarray 
+        Boundary conditions array
+    disp : ndarray 
+        Static displacement solve.
+    """   
+
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
+    print("Number of elements: {}".format(els.shape[0]))
+
+    # System assembly
+    stiff_mat, _ = ass.assembler(els, mats, nodes[:, :3], neq, assem_op)
+    rhs_vec = ass.loadasem(loads, bc_array, neq)
+
+    # System solution
+    disp = sol.static_sol(stiff_mat, rhs_vec)
+    if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(),
+                       rhs_vec/stiff_mat.max()):
+        print("The system is not in equilibrium!")
+    return bc_array, disp
+
+
+def postprocessing(nodes, mats, els, bc_array, disp):
+    """
+    Compute the nodes displacements, strains and stresses.
+    
+    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    IBC : ndarray 
+        Boundary conditions array
+    UG : ndarray 
+        Static solve.
+        
+    Returns
+    -------
+    disp_complete : ndarray 
+        Displacements at elements.
+    strain_nodes : ndarray 
+        Strains at elements.
+    stress_nodes : ndarray 
+        Stresses at elements.
+    """   
+    
+    disp_complete = pos.complete_disp(bc_array, nodes, disp)
+    strain_nodes, stress_nodes = None, None
+    strain_nodes, stress_nodes = pos.strain_nodes(nodes, els, mats, disp_complete)
+    
+    return disp_complete, strain_nodes, stress_nodes
 
 def protect_els(els, loads, BC):
     """
@@ -148,43 +258,3 @@ def strain_els(els, E_nodes, S_nodes):
     S_els = np.array(S_els)
     
     return E_els, S_els
-
-def plot_mesh(elements, nodes, disp, E_nodes=None):
-    """
-    Plot contours for model
-
-    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
-
-    Parameters
-    ----------
-    nodes : ndarray (float)
-        Array with number and nodes coordinates:
-         `number coordX coordY BCX BCY`
-    elements : ndarray (int)
-        Array with the node number for the nodes that correspond
-        to each element.
-    disp : ndarray (float)
-        Array with the displacements.
-    E_nodes : ndarray (float)
-        Array with strain field in the nodes.
-
-    """
-    # Check for structural elements in the mesh
-    struct_pos = 5 in elements[:, 1] or \
-             6 in elements[:, 1] or \
-             7 in elements[:, 1]
-    if struct_pos:
-        # Still not implemented visualization for structural elements
-        print(disp)
-    else:
-        pos.plot_node_field(disp, nodes, elements, title=[r"$u_x$", r"$u_y$"],
-                        figtitle=["Horizontal displacement",
-                                  "Vertical displacement"])
-        if E_nodes is not None:
-            pos.plot_node_field(E_nodes, nodes, elements,
-                            title=[r"",
-                                   r"",
-                                   r"",],
-                            figtitle=["Strain epsilon-xx",
-                                      "Strain epsilon-yy",
-                                      "Strain gamma-xy"])
