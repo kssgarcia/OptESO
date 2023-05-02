@@ -30,20 +30,24 @@ V_opt = volume(els, length, height, nx, ny) * 0.60
 ELS = None
 for _ in range(niter):
 
+    # Check equilibrium
     if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: break
     ELS = els
     
+    # FEW analysis
     IBC, UG = preprocessing(nodes, mats, els, loads)
     UC, E_nodes, S_nodes = postprocessing(nodes, mats, els, IBC, UG)
     E_els, S_els = strain_els(els, E_nodes, S_nodes)
     vons = np.sqrt(S_els[:,0]**2 - (S_els[:,0]*S_els[:,1]) + S_els[:,1]**2 + 3*S_els[:,2]**2)
+
+    # Remove/add elements
     RR_el = vons/vons.max()
     mask_del = RR_el < RR
     mask_els = protect_els(els, loads, BC)
     mask_del *= mask_els
-    
     els = np.delete(els, mask_del, 0)
     del_node(nodes, els)
+
     RR += ER
 print(RR)
 # %%
