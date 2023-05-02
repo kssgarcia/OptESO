@@ -10,10 +10,10 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # %%
 length = 20
-height = 5
+height = 10
 nx = 50
-ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=4)
+ny= 21
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n = 2)
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
 IBC, UG, _ = preprocessing(nodes, mats, els, loads)
@@ -22,7 +22,7 @@ UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 # %%
 niter = 200
 ERR = 0.005
-t = 0.01
+t = 0.0001
 
 r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1.5
 adj_nodes = adjacency_nodes(nodes, els)
@@ -47,7 +47,7 @@ for i in range(niter):
     if not is_equilibrium(nodes, mats, els_del, loads): 
         print('Is not equilibrium')
         break
-    
+
     # Storage the solution
     ELS = els_del
 
@@ -60,7 +60,7 @@ for i in range(niter):
     sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) #3.4
     sensi_number = sensitivity_filter(nodes, centers, sensi_nodes, r_min) #3.6
 
-    # Avarage the sensitivity numbers to the historical information 
+    # Average the sensitivity numbers to the historical information 
     if i > 0: 
         sensi_number = (sensi_number + sensi_I)/2 # 3.8
     sensi_number = sensi_number/sensi_number.max()
@@ -108,4 +108,5 @@ pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
 fill_plot = np.ones(E_nodes.shape[0])
 plt.figure()
 tri = pos.mesh2tri(nodes, ELS)
-plt.tricontourf(tri, fill_plot, cmap='binary');
+plt.tricontourf(tri, fill_plot, cmap='binary')
+plt.axis("image");

@@ -14,7 +14,7 @@ length = 20
 height = 10
 nx = 50
 ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2)
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=4)
 elsI,nodesI = np.copy(els), np.copy(nodes)
 
 # %%
@@ -25,7 +25,7 @@ UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 niter = 200
 RR = 0.01
 ER = 0.005
-V_opt = volume(els, length, height, nx, ny) * 0.60
+V_opt = volume(els, length, height, nx, ny) * 0.50
 
 ELS = None
 for _ in range(niter):
@@ -60,4 +60,5 @@ pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
 fill_plot = np.ones(E_nodes.shape[0])
 plt.figure()
 tri = pos.mesh2tri(nodes, ELS)
-plt.tricontourf(tri, fill_plot, cmap='binary');
+plt.tricontourf(tri, fill_plot, cmap='binary')
+plt.axis("image");
