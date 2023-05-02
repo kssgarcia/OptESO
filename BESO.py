@@ -12,7 +12,7 @@ np.seterr(divide='ignore', invalid='ignore')
 length = 20
 height = 10
 nx = 50
-ny= 21
+ny= 20
 nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n = 2)
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
@@ -21,7 +21,7 @@ UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
 
 # %%
 niter = 200
-ERR = 0.005
+ER = 0.01
 t = 0.0001
 
 r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1.5
@@ -72,7 +72,7 @@ for i in range(niter):
         V_r = True
         break
     else:
-        V_k = V * (1 + ERR) if V < V_opt else V * (1 - ERR)
+        V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
 
     # Remove/add threshold
     sensi_sort = np.sort(sensi_number)[::-1]
