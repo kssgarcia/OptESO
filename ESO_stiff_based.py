@@ -17,9 +17,8 @@ ny= 20
 nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2)
 elsI,nodesI = np.copy(els), np.copy(nodes)
 
-# %%
 IBC, UG = preprocessing(nodes, mats, els, loads)
-UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
+UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG)
 
 # %%
 niter = 200
@@ -36,7 +35,7 @@ for _ in range(niter):
     
     # FEW analysis
     IBC, UG = preprocessing(nodes, mats, els, loads)
-    UC, E_nodes, S_nodes = postprocessing(nodes, mats, els, IBC, UG)
+    UC, E_nodes, S_nodes = postprocessing(nodes, mats[:,:2], els, IBC, UG)
 
     # Compute Sensitivity number
     sensi_number = sensi_el(nodes, mats, els, UC)

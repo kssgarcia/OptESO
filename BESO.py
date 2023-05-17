@@ -17,14 +17,14 @@ nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n = 2)
 
 elsI,nodesI = np.copy(els), np.copy(nodes)
 IBC, UG, _ = preprocessing(nodes, mats, els, loads)
-UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
+UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG)
 
 # %%
 niter = 200
-ER = 0.01
+ER = 0.005
 t = 0.0001
 
-r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1.5
+r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1
 adj_nodes = adjacency_nodes(nodes, els)
 centers = center_els(nodes, els)
 
@@ -53,7 +53,7 @@ for i in range(niter):
 
     # FEW analysis
     IBC, UG, rhs_vec = preprocessing(nodes, mats, els_del, loads)
-    UC, E_nodes, S_nodes = postprocessing(nodes, mats, els_del, IBC, UG)
+    UC, E_nodes, S_nodes = postprocessing(nodes, mats[:,:2], els_del, IBC, UG)
 
     # Sensitivity filter
     sensi_e = sensitivity_els(nodes, mats, els, mask, UC)

@@ -47,8 +47,9 @@ def beam_1(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
         Boundary conditions nodes
 
     """
-    mats = np.array([[E,v]])
     x, y, els = pre.rect_grid(L, H, nx, ny)
+    mats = np.zeros((els.shape[0], 3))
+    mats[:] = [E,v,1]
     nodes = np.zeros(((nx + 1)*(ny + 1), 5))
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
@@ -99,8 +100,9 @@ def beam_2(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
         Boundary conditions nodes
 
     """
-    mats = np.array([[E,v]])
     x, y, els = pre.rect_grid(L, H, nx, ny)
+    mats = np.zeros((els.shape[0], 3))
+    mats[:] = [E,v,1]
     nodes = np.zeros(((nx + 1)*(ny + 1), 5))
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
@@ -154,8 +156,9 @@ def beam_3(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
         Boundary conditions nodes
 
     """
-    mats = np.array([[E,v]])
     x, y, els = pre.rect_grid(L, H, nx, ny)
+    mats = np.zeros((els.shape[0], 3))
+    mats[:] = [E,v,1]
     nodes = np.zeros(((nx + 1)*(ny + 1), 5))
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
@@ -165,7 +168,7 @@ def beam_3(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     mask = np.bitwise_or(mask_1, mask_2)
     nodes[mask, 3:] = -1
 
-    mask_loads = (x == -L/2) & (y < -H/6)
+    mask_loads = (x == -L/2) & (y == H/2)
     loads_nodes = nodes[mask_loads, 0]
     loads = np.zeros((len(loads_nodes), 3))
     loads[:, 0] = loads_nodes
@@ -209,8 +212,9 @@ def beam_4(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
         Boundary conditions nodes
 
     """
-    mats = np.array([[E,v]])
     x, y, els = pre.rect_grid(L, H, nx, ny)
+    mats = np.zeros((els.shape[0], 3))
+    mats[:] = [E,v,1]
     nodes = np.zeros(((nx + 1)*(ny + 1), 5))
     nodes[:, 0] = range((nx + 1)*(ny + 1))
     nodes[:, 1] = x
@@ -221,7 +225,7 @@ def beam_4(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20):
     nodes[mask_1, 3:] = -1
     nodes[mask_2, 4] = -1
 
-    mask_loads = (x == 0) & (y == H/2)
+    mask_loads = (x == 0) & (y == -H/2)
     loads_nodes = nodes[mask_loads, 0]
     loads = np.zeros((len(loads_nodes), 3))
     loads[:, 0] = loads_nodes

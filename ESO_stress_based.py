@@ -14,18 +14,18 @@ length = 20
 height = 10
 nx = 50
 ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=4)
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2)
 elsI,nodesI = np.copy(els), np.copy(nodes)
 
-# %%
 IBC, UG = preprocessing(nodes, mats, els, loads)
-UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats, els, IBC, UG)
+UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG)
 
 # %%
 niter = 200
-RR = 0.01
+RR = 0.001
 ER = 0.005
 V_opt = volume(els, length, height, nx, ny) * 0.50
+
 
 ELS = None
 for _ in range(niter):
@@ -36,7 +36,7 @@ for _ in range(niter):
     
     # FEW analysis
     IBC, UG = preprocessing(nodes, mats, els, loads)
-    UC, E_nodes, S_nodes = postprocessing(nodes, mats, els, IBC, UG)
+    UC, E_nodes, S_nodes = postprocessing(nodes, mats[:,:2], els, IBC, UG)
     E_els, S_els = strain_els(els, E_nodes, S_nodes)
     vons = np.sqrt(S_els[:,0]**2 - (S_els[:,0]*S_els[:,1]) + S_els[:,1]**2 + 3*S_els[:,2]**2)
 
