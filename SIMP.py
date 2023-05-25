@@ -10,19 +10,19 @@ from SIMP_utils import *
 np.seterr(divide='ignore', invalid='ignore')
 
 # Mesh
-length = 50
-height = 20
-nx = 50
-ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=3)
+length = 160
+height = 40
+nx = 200
+ny= 40
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2)
 
-# Calculate centers en volumes
+# Calculate centers and volumes
 niter = 60
 centers = center_els(nodes, els)
 Vi = volume(els, length, height, nx, ny)
 
 # Initialize the design variables
-r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 2
+r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 4
 penal = 3
 Emin=1e-9
 Emax=1.0
