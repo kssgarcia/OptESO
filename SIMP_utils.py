@@ -43,16 +43,15 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, uel=None):
         https://en.wikipedia.org/wiki/Sparse_matrix
 
     """
+
     rows = []
     cols = []
     stiff_vals = []
-    mass_vals = []
     nels = elements.shape[0]
+    kloc, _ = ass.retriever(elements, mats, nodes, -1, uel=uel)
     for ele in range(nels):
-        kloc, mloc = ass.retriever(elements, mats, nodes, ele, uel=uel)
-        if mats.shape[1] == 3:
-            kloc *= mats[elements[ele, 0], 2]
-        ndof = kloc.shape[0]
+        kloc_ = kloc * mats[elements[ele, 0], 2]
+        ndof = kloc_.shape[0]
         dme = assem_op[ele, :ndof]
         for row in range(ndof):
             glob_row = dme[row]
@@ -62,12 +61,10 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, uel=None):
                     if glob_col != -1:
                         rows.append(glob_row)
                         cols.append(glob_col)
-                        stiff_vals.append(kloc[row, col])
-                        mass_vals.append(mloc[row, col])
+                        stiff_vals.append(kloc_[row, col])
 
     stiff = coo_matrix((stiff_vals, (rows, cols)), shape=(neq, neq)).tocsr()
-    mass = coo_matrix((mass_vals, (rows, cols)), shape=(neq, neq)).tocsr()
-    return stiff, mass
+    return stiff
 
 def is_equilibrium(nodes, mats, els, loads):
     """
@@ -94,7 +91,7 @@ def is_equilibrium(nodes, mats, els, loads):
 
     equil = True
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
-    stiff_mat, _ = sparse_assem(els, mats, nodes, neq, assem_op)
+    stiff_mat = sparse_assem(els, mats, nodes, neq, assem_op)
 
     rhs_vec = ass.loadasem(loads, bc_array, neq)
     disp = sol.static_sol(stiff_mat, rhs_vec)
@@ -128,12 +125,12 @@ def preprocessing(nodes, mats, els, loads):
         Static displacement solve
     rh_vec : ndarray 
         Vector of loads
-    """   
+    """  
 
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8)
 
     # System assembly
-    stiff_mat, _ = sparse_assem(els, mats, nodes[:, :3], neq, assem_op)
+    stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op)
     rhs_vec = ass.loadasem(loads, bc_array, neq)
 
     # System solution
