@@ -1,69 +1,69 @@
 # %%
-import matplotlib.pyplot as plt
-import numpy as np
-from beams import *
-from BESO_utils import *
-# Solidspy 1.1.0
-import solidspy.postprocesor as pos 
+import matplotlib.pyplot as plt # Package for plotting
+import numpy as np # Package for scientific computing
 
-np.seterr(divide='ignore', invalid='ignore')
+from beams import * # Functions for mesh generation
+from BESO_utils import * # Fucntions for FEM analysis and postprocessing
+# Solidspy 1.1.0
+import solidspy.postprocesor as pos # SolidsPy package for postprocessing
+np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error
 
 # %%
 length = 20
 height = 10
 nx = 50
 ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n = 2)
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n = 2) # Generate mesh
 
-elsI,nodesI = np.copy(els), np.copy(nodes)
-IBC, UG, _ = preprocessing(nodes, mats, els, loads)
-UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG)
+elsI,nodesI = np.copy(els), np.copy(nodes) # Copy mesh
+IBC, UG, _ = preprocessing(nodes, mats, els, loads) # Calculate boundary conditions and global stiffness matrix
+UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG) # Calculate displacements, strains and stresses
 
 # %%
 niter = 200
-ER = 0.005
-t = 0.0001
+ER = 0.005 # Removal ratio increment
+t = 0.0001 # Threshold for error
 
-r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1
-adj_nodes = adjacency_nodes(nodes, els)
-centers = center_els(nodes, els)
+r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 1 # Radius for the sensitivity filter
+adj_nodes = adjacency_nodes(nodes, els) # Adjacency nodes
+centers = center_els(nodes, els) # Centers of elements
 
-Vi = volume(els, length, height, nx, ny)
-V_opt = Vi.sum() * 0.50
+Vi = volume(els, length, height, nx, ny) # Initial volume
+V_opt = Vi.sum() * 0.50 # Optimal volume
 
 # Initialize variables.
 ELS = None
-mask = np.ones(els.shape[0], dtype=bool)
-sensi_I = None
-C_h = np.zeros(niter)
-error = 1000
+mask = np.ones(els.shape[0], dtype=bool) # Mask of elements to be removed
+sensi_I = None  
+C_h = np.zeros(niter) # History of compliance
+error = 1000 
 
 for i in range(niter):
     # Calculate the optimal design array elements
-    els_del = els[mask].copy()
-    V = Vi[mask].sum()
+    els_del = els[mask].copy() # Elements to be removed
+    V = Vi[mask].sum() # Volume of the structure
 
     # Check equilibrium
-    if not is_equilibrium(nodes, mats, els_del, loads): 
+    if not is_equilibrium(nodes, mats, els_del, loads):  
         print('Is not equilibrium')
-        break
+        break # Stop the program if the structure is not in equilibrium
 
     # Storage the solution
-    ELS = els_del
+    ELS = els_del 
 
     # FEW analysis
-    IBC, UG, rhs_vec = preprocessing(nodes, mats, els_del, loads)
-    UC, E_nodes, S_nodes = postprocessing(nodes, mats[:,:2], els_del, IBC, UG)
+    IBC, UG, rhs_vec = preprocessing(nodes, mats, els_del, loads) # Calculate boundary conditions and global stiffness matrix
+    UC, E_nodes, S_nodes = postprocessing(nodes, mats[:,:2], els_del, IBC, UG) # Calculate displacements, strains and stresses
 
     # Sensitivity filter
-    sensi_e = sensitivity_els(nodes, mats, els, mask, UC)
-    sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) #3.4
-    sensi_number = sensitivity_filter(nodes, centers, sensi_nodes, r_min) #3.6
+    sensi_e = sensitivity_els(nodes, mats, els, mask, UC) # Calculate the sensitivity of the elements
+    sensi_nodes = sensitivity_nodes(nodes, adj_nodes, centers, sensi_e) # Calculate the sensitivity of the nodes
+    sensi_number = sensitivity_filter(nodes, centers, sensi_nodes, r_min) # Perform the sensitivity filter
 
     # Average the sensitivity numbers to the historical information 
     if i > 0: 
-        sensi_number = (sensi_number + sensi_I)/2 # 3.8
-    sensi_number = sensi_number/sensi_number.max()
+        sensi_number = (sensi_number + sensi_I)/2 # Average the sensitivity numbers to the historical information
+    sensi_number = sensi_number/sensi_number.max() # Normalize the sensitivity numbers
 
     # Check if the optimal volume is reached and calculate the next volume
     V_r = False
@@ -75,15 +75,15 @@ for i in range(niter):
         V_k = V * (1 + ER) if V < V_opt else V * (1 - ER)
 
     # Remove/add threshold
-    sensi_sort = np.sort(sensi_number)[::-1]
-    els_k = els_del.shape[0]*V_k/V
-    alpha_del = sensi_sort[int(els_k)]
+    sensi_sort = np.sort(sensi_number)[::-1] # Sort the sensitivity numbers
+    els_k = els_del.shape[0]*V_k/V # Number of elements to be removed
+    alpha_del = sensi_sort[int(els_k)] # Threshold for removing elements
 
     # Remove/add elements
-    mask = sensi_number > alpha_del
-    mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC)
-    mask = np.bitwise_or(mask, mask_els)
-    del_node(nodes, els[mask], loads, BC)
+    mask = sensi_number > alpha_del # Mask of elements to be removed
+    mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads, BC) # Mask of elements to be protected
+    mask = np.bitwise_or(mask, mask_els) 
+    del_node(nodes, els[mask], loads, BC) # Delete nodes
 
     # Calculate the strain energy and storage it 
     C = 0.5*rhs_vec.T@UG
@@ -99,10 +99,10 @@ for i in range(niter):
     sensi_I = sensi_number.copy()
 
 # %%
-pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI)
+pos.fields_plot(elsI, nodes, UCI, E_nodes=E_nodesI, S_nodes=S_nodesI) # Plot the initial design
 
 # %%
-pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes)
+pos.fields_plot(ELS, nodes, UC, E_nodes=E_nodes, S_nodes=S_nodes) # Plot the final design
 
 # %%
 fill_plot = np.ones(E_nodes.shape[0])

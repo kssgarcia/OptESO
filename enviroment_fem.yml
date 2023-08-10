@@ -129,4 +129,3 @@ dependencies:
   - pip:
       - easygui==0.98.3
       - meshio==3.0.0
-prefix: C:\Users\santy\anaconda3\envs\femenv

@@ -2,10 +2,10 @@
 
 ### In this repository will be found three optimizations codes:
 
-- BESO method `BESO.py`
-- ESO stress based method `ESO_stress_based.py`
-- ESO stiff based method `ESO_stiff_based.py`
-- SIMP method `SIMP.py`
+- BESO method [BESO.py](https://github.com/kssgarcia/OptTopolgy/blob/main/BESO.py)
+- ESO stress based method  [ESO_stress_based.py](https://github.com/kssgarcia/OptTopolgy/blob/main/ESO_stress_based.py)
+- ESO stiff based method [ESO_stiff_based.py](https://github.com/kssgarcia/OptTopolgy/blob/main/ESO_stiff_based.py)
+- SIMP method [SIMP.py](https://github.com/kssgarcia/OptTopolgy/blob/main/SIMP.py)``
 
 ### Instructions
 
