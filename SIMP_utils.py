@@ -277,6 +277,7 @@ def sensitivity_els(nodes, mats, els, UC, nx, ny):
     params = tuple(mats[1, :])
     elcoor = nodes[els[1, -4:], 1:3]
     kloc, _ = uel.elast_quad4(elcoor, params)
+    print(kloc.shape)
 
     sensi_number = (np.dot(UC[els[:,-4:]].reshape(nx*ny,8),kloc) * UC[els[:,-4:]].reshape(nx*ny,8) ).sum(1)
 

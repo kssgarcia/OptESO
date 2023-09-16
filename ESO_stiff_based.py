@@ -9,7 +9,6 @@ from beams import * # Functions for mesh generation
 import solidspy.postprocesor as pos # SolidsPy package for postprocessing
 np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error
 
-# %%
 length = 20
 height = 10
 nx = 50
