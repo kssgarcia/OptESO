@@ -1,6 +1,8 @@
 import numpy as np
 import solidspy.assemutil as ass    
 import solidspy.uelutil as uel 
+from scipy.sparse.linalg import spsolve
+import solidspy.postprocesor as pos 
 
 from scipy.sparse import coo_matrix
 
@@ -104,7 +106,7 @@ def DME(cons, elements, ndof_node=2, ndof_el_max=18, ndof_el=None):
         assem_op[ele, :ndof] = bc_array[elements[ele, 3:]].flatten()
     return assem_op, bc_array, neq
 
-def sensi_el(nodes, mats, els, UC):
+def sensi_el(nodes, mats, els, UC, kloc):
     """
     Calculate the sensitivity number for each element.
     
@@ -126,10 +128,6 @@ def sensi_el(nodes, mats, els, UC):
     """   
     sensi_number = []
     for el in range(len(els)):
-        params = tuple(mats[els[el, 2], :])
-        elcoor = nodes[els[el, -8:], 1:4]
-        kloc, _ = uel.elast_hex8(elcoor, params)
-
         node_el = els[el, -8:]
         U_el = UC[node_el]
         U_el = np.reshape(U_el, (24,1))
@@ -165,7 +163,7 @@ def del_node(nodes, els, loads, BC):
         elif n not in protect_nodes and n in els[:, -8:]:
             nodes[int(n), -3:] = 0
 
-def protect_els(els, nels, loads, BC):
+def protect_els(els, loads, BC):
     """
     Compute an mask array with the elements that don't must be deleted.
     
@@ -184,12 +182,12 @@ def protect_els(els, nels, loads, BC):
     mask_els : ndarray 
         Array with the elements that don't must be deleted.
     """   
-    mask_els = np.zeros(nels, dtype=bool)
+    mask_els = np.zeros(els.shape[0], dtype=bool)
     protect_nodes = np.hstack((loads, BC)).astype(int)
     protect_index = None
     for p in protect_nodes:
         protect_index = np.argwhere(els[:, -8:] == p)[:,0]
-        mask_els[els[protect_index,0]] = True
+        mask_els[protect_index] = True
         
     return mask_els
 

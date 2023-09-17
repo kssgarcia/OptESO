@@ -39,9 +39,9 @@ Transfinite Volume{1};
 //+
 Transfinite Surface {6};
 //+
-Transfinite Curve {9, 11, 12, 7} = 10 Using Progression 1;
+Transfinite Curve {9, 11, 12, 7} = 11 Using Progression 1;
 //+
 Transfinite Surface {1};
 //+
-Transfinite Curve {1, 2, 3, 4} = 10 Using Progression 1;
+Transfinite Curve {1, 2, 3, 4} = 11 Using Progression 1;
 

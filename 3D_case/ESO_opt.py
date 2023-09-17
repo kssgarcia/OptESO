@@ -13,7 +13,7 @@ from ESO_utils import *
 
 np.seterr(divide='ignore', invalid='ignore')
 
-mesh = meshio.read("modelo3.msh")
+mesh = meshio.read("meshes/modelo10x10x30_1.msh")
 points = mesh.points
 cells = mesh.cells
 
@@ -40,21 +40,20 @@ mats[:] = [1,0.28,1]
 
 BC = np.argwhere(nodes[:,-1]==-1)[:,0]
 
-niter = 60
-
-assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
-kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
-
 niter = 100
-RR = 0.001 # Initial removal ratio
-ER = 0.001 # Removal ratio increment
+RR = 0.01 # Initial removal ratio
+ER = 0.05 # Removal ratio increment
 ELS = None
+
+kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 
 for _ in range(niter):
 
     if not is_equilibrium(nodes, mats, els, loads):
         print('Convergence reached')
         break
+
+    assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
 
     # System assembly
     stiff_mat = sparse_assem(els, mats, nodes[:, :4], neq, assem_op, uel=uel.elast_hex8)
@@ -64,18 +63,20 @@ for _ in range(niter):
     UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
     # Compute Sensitivity number
-    sensi_number = sensi_el(nodes, mats, els, UC) # Sensitivity number
+    sensi_number = sensi_el(nodes, mats, els, UC, kloc) # Sensitivity number
+    print(sensi_number.max())
     mask_del = sensi_number < RR # Mask of elements to be removed
-    mask_els = protect_els(els, nels, loads[:,0], BC) # Mask of elements to do not remove
+    mask_els = protect_els(els, loads[:,0], BC) # Mask of elements to do not remove
     mask_del *= mask_els # Mask of elements to be removed and not protected
-    ELS = els # Save last iteration elements
     
     # Remove/add elements
     els = np.delete(els, mask_del, 0) # Remove elements
-    print(els.shape)
     del_node(nodes, els, loads[:,0], BC)
+    print(els.shape[0])
 
     RR += ER
+
+    print(RR)
 
 # %% Get data to plot
 

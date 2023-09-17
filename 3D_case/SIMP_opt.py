@@ -13,7 +13,7 @@ from SIMP_utils_3d import *
 
 np.seterr(divide='ignore', invalid='ignore')
 
-mesh = meshio.read("modelo1.msh")
+mesh = meshio.read("meshes/modelo10x10x30_1.msh")
 points = mesh.points
 cells = mesh.cells
 
@@ -24,9 +24,9 @@ nodes[np.unique(cells[1].data.flatten()),-3:] = -1
 
 n_loads = np.unique(cells[0].data.flatten()).shape[0]
 
-loads = np.zeros((n_loads,4))
-loads[:,0] = np.unique(cells[0].data.flatten())
-loads[:,2] = 1/n_loads
+loads = np.zeros((1,4))
+loads[:,0] = cells[0].data.flatten()[6]
+loads[:,2] = 1
 
 els = np.zeros((cells[-1].data.shape[0], 11), dtype=int)
 els[:,0] = np.arange(0,cells[-1].data.shape[0], dtype=int)
@@ -40,7 +40,7 @@ mats[:] = [1,0.28,1]
 
 BC = np.argwhere(nodes[:,-1]==-1)[:,0]
 
-niter = 20
+niter = 100
 penal = 3 # Penalization factor
 Emin=1e-9 # Minimum young modulus of the material
 Emax=1.0 # Maximum young modulus of the material
@@ -55,7 +55,7 @@ rho_old = rho.copy() # Initialize the density history
 d_c = np.ones(nels) # Initialize the design change
 
 centers = center_els(nodes, els) # Calculate centers
-r_min = np.linalg.norm(centers[0] - centers[1]) # Radius for the sensitivity filter
+r_min = np.linalg.norm(centers[0] - centers[1]) * 0.5 # Radius for the sensitivity filter
 E = mats[0,0] # Young modulus
 nu = mats[0,1] # Poisson ratio
 
@@ -65,14 +65,14 @@ kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 for _ in range(niter):
 
     # Check convergence
-    if change < 0.01 or not is_equilibrium(nodes, mats, els, loads):
+    if change < 0.00001 or not is_equilibrium(nodes, mats, els, loads):
         print('Convergence reached')
         break
 
     # Change density 
     mats[:,2] = Emin+rho**penal*(Emax-Emin)
 
-    # System assembly
+    # FEM analisys
     stiff_mat = sparse_assem(els, mats, nodes[:, :4], neq, assem_op, uel=uel.elast_hex8)
     rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 
@@ -94,7 +94,7 @@ for _ in range(niter):
 
 # %% Get data to plot
 
-mask = rho > 0.5
+mask = rho > 0.9
 mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads[:,0], BC)
 mask = np.bitwise_or(mask, mask_els)
 del_node(nodes, els[mask], loads[:,0], BC)
