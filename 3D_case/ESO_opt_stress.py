@@ -7,13 +7,15 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import solidspy.assemutil as ass # Solidspy 1.1.0
 import solidspy.postprocesor as pos 
 import solidspy.uelutil as uel 
+import solidspy.gaussutil as gaus
+import solidspy.femutil as fe
 import meshio
 
 from ESO_utils import *
 
 np.seterr(divide='ignore', invalid='ignore')
 
-mesh = meshio.read("meshes/modelo10x10x30_2.msh")
+mesh = meshio.read("meshes/modelo10x10x30_1.msh")
 points = mesh.points
 cells = mesh.cells
 
@@ -47,6 +49,64 @@ ELS = None
 
 kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 
+
+# %%
+
+def str_el8(coord, ul):
+    epsG = np.zeros([6, 8])
+    xl = np.zeros([8, 3])
+    gpts, _ = gaus.gauss_nd(8,ndim=3)
+    for i in range(8):
+        ri, si, ti = gpts[i, :]
+        H, B, _ = fe.elast_diff_3d(ri, si, ti, coord)
+        epsG[:, i] = B @ ul
+        xl[i, 0] = np.dot(H[0, ::3], coord[:, 0])
+        xl[i, 1] = np.dot(H[0, ::3], coord[:, 1])
+        xl[i, 2] = np.dot(H[0, ::3], coord[:, 2])
+    return epsG.T, xl
+
+def strain_n(nodes, elements, mats, sol_complete):
+    nelems = elements.shape[0]
+    nnodes = nodes.shape[0]
+    ndof, nnodes_elem = (24,8)
+
+    elcoor = np.zeros([nnodes_elem, 3])
+    E_nodes = np.zeros([nnodes, 3])
+    S_nodes = np.zeros([nnodes, 3])
+    el_nodes = np.zeros([nnodes], dtype=int)
+    ul = np.zeros([ndof])
+    IELCON = elements[:, 3:]
+
+    for el in range(nelems):
+        young, poisson = mats[int(elements[el, 2]), -2:]
+        shear = young/(2*(1 + poisson))
+        fact1 = young/(1 - poisson**2)
+        fact2 = poisson*young/(1 - poisson**2)
+        elcoor[:, 0] = nodes[IELCON[el, :], 1]
+        elcoor[:, 1] = nodes[IELCON[el, :], 2]
+        elcoor[:, 2] = nodes[IELCON[el, :], 3]
+        ul[0:8] = sol_complete[IELCON[el, :], 0]
+        ul[8:16] = sol_complete[IELCON[el, :], 1]
+        ul[16:] = sol_complete[IELCON[el, :], 2]
+        epsG, _ = str_el8(elcoor, ul)
+
+        for cont, node in enumerate(IELCON[el, :]):
+            E_nodes[node, 0] += epsG[cont, 0]
+            E_nodes[node, 1] += epsG[cont, 1]
+            E_nodes[node, 2] += epsG[cont, 2]
+            S_nodes[node, 0] += fact1*epsG[cont, 0]  + fact2*epsG[cont, 1]
+            S_nodes[node, 1] += fact2*epsG[cont, 0]  + fact1*epsG[cont, 1]
+            S_nodes[node, 2] += shear*epsG[cont, 2]
+            el_nodes[node] = el_nodes[node] + 1
+
+    E_nodes[:, 0] /= el_nodes
+    E_nodes[:, 1] /= el_nodes
+    E_nodes[:, 2] /= el_nodes
+    S_nodes[:, 0] /= el_nodes
+    S_nodes[:, 1] /= el_nodes
+    S_nodes[:, 2] /= el_nodes
+    return E_nodes, S_nodes
+
 for _ in range(1):
 
     if not is_equilibrium(nodes, mats, els, loads):
@@ -55,26 +115,18 @@ for _ in range(1):
 
     assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
 
+
+    ELS = els.copy()
+
     # System assembly
     stiff_mat = sparse_assem(els, mats, nodes[:, :4], neq, assem_op, uel=uel.elast_hex8)
     rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 
     disp = spsolve(stiff_mat, rhs_vec)
     UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
-    ELS = els.copy()
-
-    # Compute Sensitivity number
-    sensi_number = sensi_el(nodes, mats, els, UC, kloc) # Sensitivity number
-    
-    mask_del = sensi_number < RR # Mask of elements to be removed
-    mask_els = protect_els(els, loads[:,0], BC) # Mask of elements to do not remove
-    mask_del *= mask_els # Mask of elements to be removed and not protected
-    
-    # Remove/add elements
-    els = np.delete(els, mask_del, 0) # Remove elements
-    del_node(nodes, els, loads[:,0], BC)
-    print(sensi_number.min(), sensi_number.max())
-    print(els.shape[0], '--')
+    strain_nodes, stress_nodes = None, None
+    strain_nodes, stress_nodes = strain_n(nodes, els, mats, UC)
+    print(stress_nodes)
 
     RR += ER
 
@@ -82,11 +134,12 @@ for _ in range(1):
 
 # %% Get data to plot
 
-E_els = strain_els(ELS, UC)
+#E_els = strain_els(ELS, UC)
+E_els = strain_els(ELS, strain_nodes)
 E_els /= E_els.max()
 
 cmap = plt.get_cmap('viridis')
-colors = cmap(UC[:,2])
+colors = cmap(UC[:,1])
 
 nodes_plot = nodes[:,1:4]
 hexahedra = ELS[:,-8:]

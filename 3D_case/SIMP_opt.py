@@ -55,22 +55,23 @@ rho_old = rho.copy() # Initialize the density history
 d_c = np.ones(nels) # Initialize the design change
 
 centers = center_els(nodes, els) # Calculate centers
-r_min = np.linalg.norm(centers[0] - centers[1]) * 0.5 # Radius for the sensitivity filter
+r_min = np.linalg.norm(centers[0] - centers[1]) * 0.3 # Radius for the sensitivity filter
 E = mats[0,0] # Young modulus
 nu = mats[0,1] # Poisson ratio
 
 assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
 kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 
-for _ in range(niter):
+for _ in range(100):
 
     # Check convergence
-    if change < 0.00001 or not is_equilibrium(nodes, mats, els, loads):
+    if change < 0.01 or not is_equilibrium(nodes, mats, els, loads):
+    #if not is_equilibrium(nodes, mats, els, loads):
         print('Convergence reached')
         break
 
     # Change density 
-    mats[:,2] = Emin+rho**penal*(Emax-Emin)
+    mats[:,0] = Emin+rho**penal*(Emax-Emin)
 
     # FEM analisys
     stiff_mat = sparse_assem(els, mats, nodes[:, :4], neq, assem_op, uel=uel.elast_hex8)
@@ -80,7 +81,8 @@ for _ in range(niter):
     UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
     # Sensitivity analysis
-    sensi_rho[:] = (np.dot(UC[els[:,-8:]].reshape(nels,ndof),kloc) * UC[els[:,-8:]].reshape(nels,ndof) ).sum(1)
+    #sensi_rho[:] = (np.dot(UC[els[:,-8:]].reshape(nels,ndof),kloc) * UC[els[:,-8:]].reshape(nels,ndof) ).sum(1)
+    sensi_rho[:] = sensi_el(nodes, mats, els, UC, kloc) # Sensitivity number
     d_c[:] = (-penal*rho**(penal-1)*(Emax-Emin))*sensi_rho
     d_c[:] = density_filter(centers, r_min, rho, d_c)
 
@@ -88,13 +90,15 @@ for _ in range(niter):
     rho_old[:] = rho.copy()
     rho[:], g = optimality_criteria(nels, rho, d_c, g)
 
+    mats[:,2] = rho.copy()
+
     # Compute the change
     change = np.linalg.norm(rho.reshape(nels,1)-rho_old.reshape(nels,1),np.inf)
     print(change)
 
 # %% Get data to plot
 
-mask = rho > 0.9
+mask = rho > 0.5
 mask_els = protect_els(els[np.invert(mask)], els.shape[0], loads[:,0], BC)
 mask = np.bitwise_or(mask, mask_els)
 del_node(nodes, els[mask], loads[:,0], BC)
@@ -122,6 +126,7 @@ colors = cmap(E_els)
 # Create a 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
+ax.set_axis_off()
 
 # Plot the hexahedra elements by plotting each face
 for index, element in enumerate(hexahedra):
@@ -148,6 +153,7 @@ ax.set_ylim(-2, 2)
 ax.set_zlim(-2, 2)
 
 # Show the plot
+plt.savefig('plot.png', transparent=True)
 plt.show()
 
 # %% Scatter plot 
@@ -163,3 +169,4 @@ ax.set_zlabel('Z')
 
 # Show the plot
 plt.show()
+plt.savefig('plot.png', transparent=True)

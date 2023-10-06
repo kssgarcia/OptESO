@@ -52,7 +52,7 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, uel=None):
     nels = elements.shape[0]
     kloc, _ = ass.retriever(elements, mats, nodes, -1, uel=uel)
     for ele in range(nels):
-        kloc_ = kloc * mats[elements[ele, 0], 2]
+        kloc_ = kloc * mats[elements[ele, 0], 0]
         ndof = kloc_.shape[0]
         dme = assem_op[ele, :ndof]
         for row in range(ndof):
@@ -138,7 +138,6 @@ def is_equilibrium(nodes, mats, els, loads):
     rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 
     disp = spsolve(stiff_mat, rhs_vec)
-    UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
     if not np.allclose(stiff_mat.dot(disp)/stiff_mat.max(), rhs_vec/stiff_mat.max()):
         equil = False
 
@@ -234,10 +233,8 @@ def optimality_criteria(nels, rho, d_c, g):
 
     Parameters
     ----------
-    nelx : int
-        Number of elements in x direction.
-    nely : int
-        Number of elements in y direction.
+    nels : int
+        Number of elements.
     rho : ndarray
         Array with the density of each element.
     d_c : ndarray
@@ -319,3 +316,35 @@ def protect_els(els, nels, loads, BC):
         mask_els[els[protect_index,0]] = True
         
     return mask_els
+
+def sensi_el(nodes, mats, els, UC, kloc):
+    """
+    Calculate the sensitivity number for each element.
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    UC : ndarray
+        Displacements at nodes
+
+    Returns
+    -------
+    sensi_number : ndarray
+        Sensitivity number for each element.
+    """   
+    sensi_number = []
+    for el in range(len(els)):
+        node_el = els[el, -8:]
+        U_el = UC[node_el]
+        U_el = np.reshape(U_el, (24,1))
+        a_i = U_el.T.dot(kloc.dot(U_el))[0,0]
+        sensi_number.append(a_i)
+    sensi_number = np.array(sensi_number)
+    sensi_number = sensi_number/sensi_number.max()
+
+    return sensi_number
