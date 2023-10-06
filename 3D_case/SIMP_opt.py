@@ -13,7 +13,7 @@ from SIMP_utils_3d import *
 
 np.seterr(divide='ignore', invalid='ignore')
 
-mesh = meshio.read("meshes/modelo10x10x30_1.msh")
+mesh = meshio.read("meshes/modelo10x10x30_3.msh")
 points = mesh.points
 cells = mesh.cells
 
@@ -62,6 +62,9 @@ nu = mats[0,1] # Poisson ratio
 assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
 kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 
+
+# %%
+'''
 for _ in range(100):
 
     # Check convergence
@@ -104,6 +107,9 @@ mask = np.bitwise_or(mask, mask_els)
 del_node(nodes, els[mask], loads[:,0], BC)
 els = els[mask]
 
+'''
+
+# %%
 nodes_plot = nodes[:,1:4]
 hexahedra = els[:,-8:]
 
@@ -117,7 +123,7 @@ rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 disp = spsolve(stiff_mat, rhs_vec)
 UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
-E_els = strain_els(els, UC)
+E_els = strain_els(els, UC[:,2])
 E_els /= E_els.max()
 
 cmap = plt.get_cmap('viridis')
@@ -160,7 +166,7 @@ plt.show()
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(nodes[:,1], nodes[:,2], nodes[:,3], c=UC[:,2], marker='o', label='Random Points')
+ax.scatter(nodes[:,1], nodes[:,2], nodes[:,3], c=UC[:,0], marker='o', label='Random Points')
 
 # Set labels for the axes
 ax.set_xlabel('X')
