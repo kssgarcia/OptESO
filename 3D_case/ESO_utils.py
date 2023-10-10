@@ -213,7 +213,8 @@ def strain_els(els, E_nodes):
     E_els = []
     for el in els:
         strain_nodes = np.take(E_nodes, list(el[3:]), 0)
-        strain_nodes = np.linalg.norm(strain_nodes, axis=1)
+        if strain_nodes.shape[0] == 0:
+            strain_nodes = np.linalg.norm(strain_nodes, axis=1)
         strain_elemt = strain_nodes.sum(0) / strain_nodes.shape[0]
         E_els.append(strain_elemt)
 

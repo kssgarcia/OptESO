@@ -8,6 +8,7 @@ import solidspy.assemutil as ass # Solidspy 1.1.0
 import solidspy.postprocesor as pos 
 import solidspy.uelutil as uel 
 import meshio
+import pyvista as pv
 
 from SIMP_utils_3d import *
 
@@ -64,7 +65,6 @@ kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 
 
 # %%
-'''
 for _ in range(100):
 
     # Check convergence
@@ -107,9 +107,7 @@ mask = np.bitwise_or(mask, mask_els)
 del_node(nodes, els[mask], loads[:,0], BC)
 els = els[mask]
 
-'''
-
-# %%
+# %% Plot
 nodes_plot = nodes[:,1:4]
 hexahedra = els[:,-8:]
 
@@ -122,6 +120,25 @@ rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 
 disp = spsolve(stiff_mat, rhs_vec)
 UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
+
+colormap = 'viridis'
+d_uc = UC[:,2]
+normalized_disp = (d_uc-d_uc.min())/(d_uc.max()-d_uc.min())
+pv.set_plot_theme("document")
+
+p = pv.Plotter()
+p.add_mesh(
+    mesh=pv.from_meshio(mesh),
+    scalars=normalized_disp,
+    cmap=colormap,
+    show_scalar_bar=True,
+    show_edges=True,
+    lighting=True
+)
+p.show_axes()
+p.show()
+
+# %%
 
 E_els = strain_els(els, UC[:,2])
 E_els /= E_els.max()
@@ -161,18 +178,3 @@ ax.set_zlim(-2, 2)
 # Show the plot
 plt.savefig('plot.png', transparent=True)
 plt.show()
-
-# %% Scatter plot 
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(nodes[:,1], nodes[:,2], nodes[:,3], c=UC[:,0], marker='o', label='Random Points')
-
-# Set labels for the axes
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-
-# Show the plot
-plt.show()
-plt.savefig('plot.png', transparent=True)
