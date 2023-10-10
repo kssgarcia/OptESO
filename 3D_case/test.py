@@ -55,16 +55,15 @@ UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
 # Plotting
 colormap = 'viridis'
-d_uc = UC[:,1]
-normalized_disp = (d_uc-d_uc.min())/(d_uc.max()-d_uc.min())
-pv.set_plot_theme("document")
+d_uc = UC[:,2]
+normalized_disp = d_uc
 
+pv.set_plot_theme("document")
 p = pv.Plotter()
 p.add_mesh(
     mesh=pv.from_meshio(mesh),
     scalars=normalized_disp,
     cmap=colormap,
-    show_scalar_bar=True,
     show_edges=True,
     lighting=True
 )

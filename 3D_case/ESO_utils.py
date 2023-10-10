@@ -48,8 +48,8 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, uel=None):
     cols = []
     stiff_vals = []
     nels = elements.shape[0]
-    kloc, _ = ass.retriever(elements, mats, nodes, -1, uel=uel)
     for ele in range(nels):
+        kloc, _ = ass.retriever(elements, mats, nodes, ele, uel=uel)
         kloc_ = kloc * mats[elements[ele, 0], 2]
         ndof = kloc_.shape[0]
         dme = assem_op[ele, :ndof]
