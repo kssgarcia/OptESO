@@ -55,7 +55,7 @@ UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
 # Plotting
 colormap = 'viridis'
-d_uc = UC[:,2]
+d_uc = UC[:,0]
 normalized_disp = d_uc
 
 pv.set_plot_theme("document")
@@ -65,7 +65,8 @@ p.add_mesh(
     scalars=normalized_disp,
     cmap=colormap,
     show_edges=True,
-    lighting=True
+    lighting=True,
+    scalar_bar_args={'title': 'Displacement', 'vertical': True}
 )
 p.show_axes()
 p.show()
