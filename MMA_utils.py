@@ -63,3 +63,77 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, kloc):
     stiff = coo_matrix((stiff_vals, (rows, cols)), shape=(neq, neq)).tocsr()
 
     return stiff
+
+def sensi_el(els, UC, kloc):
+    """
+    Calculate the sensitivity number for each element.
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        Array with models nodes
+    mats : ndarray
+        Array with models materials
+    els : ndarray
+        Array with models elements
+    UC : ndarray
+        Displacements at nodes
+
+    Returns
+    -------
+    sensi_number : ndarray
+        Sensitivity number for each element.
+    """   
+    sensi_number = []
+    for el in range(len(els)):
+
+        node_el = els[el, -4:]
+        U_el = UC[node_el]
+        U_el = np.reshape(U_el, (8,1))
+        x_i = -U_el.T.dot(kloc.dot(U_el))[0,0]
+        sensi_number.append(x_i)
+    sensi_number = np.array(sensi_number)
+    sensi_number = sensi_number/np.abs(sensi_number).max()
+
+    return sensi_number
+
+def volume(length, height, nx, ny):
+    """
+    Volume calculation.
+    
+    Parameters
+    ----------
+    els : ndarray
+        Array with models elements.
+    length : ndarray
+        Length of the beam.
+    height : ndarray
+        Height of the beam.
+    nx : float
+        Number of elements in x direction.
+    ny : float
+        Number of elements in y direction.
+
+    Return 
+    ----------
+    V: float
+
+    """
+
+    dy = length / nx
+    dx = height / ny
+    V = dy*dx
+
+    return V
+
+def objective_function(lamb, r_o, v_max, q_o, x_j, L_j, v_j):
+    return q_o - lamb*v_max + (q_o/(x_j-L_j) + lamb*v_j*x_j).sum()
+
+def gradient(x_j, v_max, v_j):
+    return (v_j*x_j).sum() - v_max
+
+def optimality_criterion(x_j, x_min, x_max):
+  x_j[(x_j<x_min)] = x_min
+  x_j[(x_j>x_max)] = x_max
+  return x_j
+   

@@ -21,7 +21,7 @@ cells = mesh.cells
 nodes = np.zeros((points.shape[0], 7))
 nodes[:,0] = np.arange(0,points.shape[0])
 nodes[:,1:4] = points
-nodes[np.unique(cells[1].data.flatten()),-3:] = -1
+nodes[np.unique(cells[1].data.flatten()),-3] = -1
 
 n_loads = np.unique(cells[0].data.flatten()).shape[0]
 

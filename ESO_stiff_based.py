@@ -25,7 +25,7 @@ RR = 0.005 # Initial removal ratio
 ER = 0.005 # Removal ratio increment
 V_opt = volume(els, length, height, nx, ny) * 0.50 # Optimal volume
 ELS = None
-for _ in range(niter):
+for _ in range(1):
     # Check equilibrium
     if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: break # Check equilibrium/volume and stop if not
     

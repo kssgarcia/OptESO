@@ -53,9 +53,9 @@ rhs_vec = ass.loadasem(loads, bc_array, neq, ndof_node=3)
 disp = spsolve(stiff_mat, rhs_vec)
 UC = pos.complete_disp(bc_array, nodes, disp, ndof_node=3)
 
-# Plotting
+# %% Plotting
 colormap = 'viridis'
-d_uc = UC[:,0]
+d_uc = UC[:,1]
 normalized_disp = d_uc
 
 pv.set_plot_theme("document")

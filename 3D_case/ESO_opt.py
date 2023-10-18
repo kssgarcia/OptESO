@@ -21,13 +21,14 @@ cells = mesh.cells
 nodes = np.zeros((points.shape[0], 7))
 nodes[:,0] = np.arange(0,points.shape[0])
 nodes[:,1:4] = points
-nodes[np.unique(cells[1].data.flatten()),-3:] = -1
+#nodes[np.unique(cells[1].data.flatten()),-3] = -1
 
 n_loads = np.unique(cells[0].data.flatten()).shape[0]
-
-loads = np.zeros((n_loads,4))
-loads[:,0] = np.unique(cells[0].data.flatten())
-loads[:,1] = 1/n_loads
+loads = np.zeros((n_loads*2,4))
+loads[:n_loads,0] = np.unique(cells[0].data.flatten())
+loads[n_loads:,0] = np.unique(cells[1].data.flatten())
+loads[:n_loads,1] = 1/n_loads
+loads[n_loads:,1] = -1/n_loads
 
 els = np.zeros((cells[-1].data.shape[0], 11), dtype=int)
 els[:,0] = np.arange(0,cells[-1].data.shape[0], dtype=int)
@@ -51,9 +52,11 @@ kloc, _ = ass.retriever(els, mats, nodes[:,:4], -1, uel=uel.elast_hex8)
 # %%
 for _ in range(niter):
 
+    '''
     if not is_equilibrium(nodes, mats, els, loads):
         print('Convergence reached')
         break
+    '''
 
     assem_op, bc_array, neq = DME(nodes[:, -3:], els, ndof_node=3, ndof_el_max=ndof)
 
@@ -121,7 +124,6 @@ p.show_axes()
 p.show()
 
 # %%
-'''
 
 nodes_plot = nodes[:,1:4]
 hexahedra = els[:,-8:]
@@ -164,4 +166,3 @@ ax.set_zlim(-2, 2)
 # Show the plot
 plt.savefig('plot.png', transparent=True)
 plt.show()
-'''
