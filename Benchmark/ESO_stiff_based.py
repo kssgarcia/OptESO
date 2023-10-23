@@ -11,21 +11,20 @@ np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error
 
 length = 60
 height = 60
-nx = 50
-ny= 20
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2) # Generate mesh
+nx = 60
+ny= 60
+nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=61)
 elsI,nodesI = np.copy(els), np.copy(nodes) # Copy mesh
 
 IBC, UG = preprocessing(nodes, mats, els, loads) # Calculate boundary conditions and global stiffness matrix
 UCI, E_nodesI, S_nodesI = postprocessing(nodes, mats[:,:2], els, IBC, UG) # Calculate displacements, strains and stresses
 
-# %%
 niter = 200
 RR = 0.005 # Initial removal ratio
 ER = 0.005 # Removal ratio increment
 V_opt = volume(els, length, height, nx, ny) * 0.50 # Optimal volume
 ELS = None
-for _ in range(1):
+for _ in range(niter):
     # Check equilibrium
     if not is_equilibrium(nodes, mats, els, loads) or volume(els, length, height, nx, ny) < V_opt: break # Check equilibrium/volume and stop if not
     

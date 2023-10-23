@@ -10,10 +10,10 @@ from SIMP_utils import * # Fucntions for FEM analysis and postprocessing
 np.seterr(divide='ignore', invalid='ignore')
 
 # Mesh
-length = 160
-height = 40
-nx = 200
-ny= 40
+length = 60
+height = 60
+nx = 60
+ny= 60
 nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2) # Generate mesh
 
 niter = 60

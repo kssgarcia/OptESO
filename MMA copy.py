@@ -4,6 +4,8 @@ from matplotlib import colors
 import numpy as np # Package for scientific computing
 import solidspy.assemutil as ass # Solidspy 1.1.0
 from scipy.sparse.linalg import spsolve
+from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar
 import solidspy.postprocesor as pos 
 
 from beams import * # Functions for mesh generation
@@ -39,18 +41,18 @@ v_j = np.ones((els.shape[0])) * volume(length, height, nx, ny)
 v_max = volume(length, height, nx, ny) * int(els.shape[0] * volfrac)
 
 x_j = np.ones(ny*nx) * 0.5 # Initialize the sensitivity
-x_min=1e-5 # Minimum young modulus of the material
-x_max=1.0 # Maximum young modulus of the material
-lamb = 1.0
-penal = 4 # Penalization factor
-s = 0.4 # S init
+x_min = np.ones(ny*nx)*1e-5 # Minimum young modulus of the material
+x_max = np.ones(ny*nx) # Maximum young modulus of the material
+lamb = 0
+penal = 3 # Penalization factor
 mu = 0.8
+s = 0.4 # S init
 L_j = x_j - s*(x_max-x_min)
 alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 x_j_prev = None
 x_j_after_prev = None
 
-for iter in range(3):
+for iter in range(100):
 
     # Check convergence
     if change < 0.01:
@@ -70,12 +72,13 @@ for iter in range(3):
     d_g = sensi_el(els, UC, kloc)
 
     # Filtering the design variable to be in a feasible interval
+    x_j = np.clip(x_j, x_min, x_max)
     x_j_after_prev = x_j_prev
     x_j_prev = x_j.copy()
 
     # Calculate the asymptotes
     q_o = -(x_j - L_j)**2 * d_g
-    r_o = g - (-(x_j - L_j) * d_g).sum()
+    r_o = g + ((x_j - L_j) * d_g).sum()
 
     for _ in range(10000):
         grad = gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max)
@@ -84,9 +87,13 @@ for iter in range(3):
             break
     print(lamb)
 
+    dual_problem = minimize(objective_function, lamb, bounds=[(0, None)], args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max))
+    #dual_problem = minimize(objective_function, 1, bounds=[(0, None)], args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max), jac=gradient)
+    lamb = dual_problem.x[0]
+    print(lamb)
+
     # Calculate the design variable for the next iteration
-    x_j = L_j + np.sqrt(q_o/(lamb*v_j))
-    x_j = np.clip(x_j, alpha, x_max)
+    x_j = x_star(lamb, L_j, q_o, v_j, alpha, x_max)
 
     # Change the distance of the asymptotes
     if iter>1:
@@ -95,6 +102,8 @@ for iter in range(3):
             s = 1.3
         else:
             s = 0.6
+    
+    # %%
     L_j = x_j - s*(x_j_prev-L_j)
     alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 

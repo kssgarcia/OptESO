@@ -86,14 +86,12 @@ def sensi_el(els, UC, kloc):
     """   
     sensi_number = []
     for el in range(len(els)):
-
         node_el = els[el, -4:]
         U_el = UC[node_el]
         U_el = np.reshape(U_el, (8,1))
         x_i = -U_el.T.dot(kloc.dot(U_el))[0,0]
         sensi_number.append(x_i)
     sensi_number = np.array(sensi_number)
-    sensi_number = sensi_number/np.abs(sensi_number).max()
 
     return sensi_number
 
@@ -126,14 +124,15 @@ def volume(length, height, nx, ny):
 
     return V
 
-def objective_function(lamb, r_o, v_max, q_o, x_j, L_j, v_j):
-    return q_o - lamb*v_max + (q_o/(x_j-L_j) + lamb*v_j*x_j).sum()
+def x_star(lamb, q_o, L_j, v_j, alpha, x_max):
+    x_t = L_j + np.sqrt(q_o / (lamb * v_j))
+    x_star = np.minimum(np.maximum(x_t, alpha), x_max)
+    return x_star
 
-def gradient(x_j, v_max, v_j):
-    return (v_j*x_j).sum() - v_max
+def objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
+    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
+    return r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum()
 
-def optimality_criterion(x_j, x_min, x_max):
-  x_j[(x_j<x_min)] = x_min
-  x_j[(x_j>x_max)] = x_max
-  return x_j
-   
+def gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
+    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
+    return (v_j * x_star_value).sum() - v_max
