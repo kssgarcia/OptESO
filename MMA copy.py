@@ -8,8 +8,8 @@ from scipy.optimize import minimize
 from scipy.optimize import minimize_scalar
 import solidspy.postprocesor as pos 
 
-from beams import * # Functions for mesh generation
-from MMA_utils import * # Fucntions for FEM analysis and postprocessing
+from Utils.beams import * # Functions for mesh generation
+from Utils.MMA_utils import * # Fucntions for FEM analysis and postprocessing
 # Solidspy 1.1.0
 np.seterr(divide='ignore', invalid='ignore')
 

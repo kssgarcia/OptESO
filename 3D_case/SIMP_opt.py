@@ -10,7 +10,7 @@ import solidspy.uelutil as uel
 import meshio
 import pyvista as pv
 
-from SIMP_utils_3d import *
+from Utils.SIMP_utils_3d import *
 
 np.seterr(divide='ignore', invalid='ignore')
 

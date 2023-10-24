@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt # Package for plotting
 import numpy as np # Package for scientific computing
 
-from ESO_utils import * # Fucntions for FEM analysis and postprocessing
-from beams import * # Functions for mesh generation
+from Utils.ESO_utils import * # Fucntions for FEM analysis and postprocessing
+from Utils.beams import * # Functions for mesh generation
 
 # Solidspy 1.1.0
 import solidspy.postprocesor as pos # SolidsPy package for postprocessing

@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt # Package for plotting
 import numpy as np # Package for scientific computing
 
-from beams import * # Functions for mesh generation
-from BESO_utils import * # Fucntions for FEM analysis and postprocessing
+from Utils.beams import * # Functions for mesh generation
+from Utils.BESO_utils import * # Fucntions for FEM analysis and postprocessing
 # Solidspy 1.1.0
 import solidspy.postprocesor as pos # SolidsPy package for postprocessing
 np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error

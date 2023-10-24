@@ -4,8 +4,8 @@ from matplotlib import colors
 from matplotlib import animation # Package for animation
 import numpy as np # Package for scientific computing
 
-from beams import * # Functions for mesh generation
-from SIMP_utils import * # Fucntions for FEM analysis and postprocessing
+from Utils.beams import * # Functions for mesh generation
+from Utils.SIMP_utils import * # Fucntions for FEM analysis and postprocessing
 # Solidspy 1.1.0
 np.seterr(divide='ignore', invalid='ignore')
 

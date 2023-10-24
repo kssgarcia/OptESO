@@ -11,7 +11,7 @@ import solidspy.gaussutil as gaus
 import solidspy.femutil as fe
 import meshio
 
-from ESO_utils import *
+from Utils.ESO_utils import *
 
 np.seterr(divide='ignore', invalid='ignore')
 
