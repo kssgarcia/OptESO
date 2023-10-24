@@ -52,7 +52,7 @@ alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 x_j_prev = None
 x_j_after_prev = None
 
-for iter in range(1):
+for iter in range(20):
 
     # Check convergence
     if change < 0.01:
@@ -94,20 +94,22 @@ for iter in range(1):
     # Calculate the design variable for the next iteration
     x_j = x_star(lamb, L_j, q_o, v_j, alpha, x_max)
 
+    change = np.linalg.norm(x_j-x_j_prev)
+    print(change, '----')
+
     # %%
     # Change the distance of the asymptotes
     if iter>1:
         sign = (x_j-x_j_prev)*(x_j_prev-x_j_after_prev)
         if np.all(sign >= 0) or np.all(sign < 0):
             s = 1.3
+            print('here')
         else:
             s = 0.6
+            print('nooo')
+        L_j = x_j - s*(x_j_prev-L_j)
+        alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
     
-    L_j = x_j - s*(x_j_prev-L_j)
-    alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
-
-    change = np.linalg.norm(x_j-x_j_prev)
-    print(change, '----')
 
 # %%
 # Generate a range of lambda values for the plot

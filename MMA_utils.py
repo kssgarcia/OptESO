@@ -126,7 +126,7 @@ def volume(length, height, nx, ny):
 
 def x_star(lamb, q_o, L_j, v_j, alpha, x_max):
     x_t = L_j + np.sqrt(q_o / (lamb * v_j))
-    x_star = np.minimum(np.maximum(x_t, alpha), x_max)
+    x_star = np.clip(x_t, alpha, x_max)
     return x_star
 
 def objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
