@@ -106,7 +106,7 @@ for iter in range(3):
 lamb_values = np.linspace(0, 10000, 1000)
 
 # Calculate the objective function values and gradient values for the lambda range
-objective_values = [objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
+objective_values = [-objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
 gradient_values = [gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
 
 # Plot the objective function

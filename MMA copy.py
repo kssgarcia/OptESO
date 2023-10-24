@@ -52,7 +52,7 @@ alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 x_j_prev = None
 x_j_after_prev = None
 
-for iter in range(100):
+for iter in range(1):
 
     # Check convergence
     if change < 0.01:
@@ -72,7 +72,6 @@ for iter in range(100):
     d_g = sensi_el(els, UC, kloc)
 
     # Filtering the design variable to be in a feasible interval
-    x_j = np.clip(x_j, x_min, x_max)
     x_j_after_prev = x_j_prev
     x_j_prev = x_j.copy()
 
@@ -95,6 +94,7 @@ for iter in range(100):
     # Calculate the design variable for the next iteration
     x_j = x_star(lamb, L_j, q_o, v_j, alpha, x_max)
 
+    # %%
     # Change the distance of the asymptotes
     if iter>1:
         sign = (x_j-x_j_prev)*(x_j_prev-x_j_after_prev)
@@ -103,7 +103,6 @@ for iter in range(100):
         else:
             s = 0.6
     
-    # %%
     L_j = x_j - s*(x_j_prev-L_j)
     alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 
@@ -115,7 +114,7 @@ for iter in range(100):
 lamb_values = np.linspace(0, 10000, 1000)
 
 # Calculate the objective function values and gradient values for the lambda range
-objective_values = [objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
+objective_values = [-objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
 gradient_values = [gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
 
 # Plot the objective function

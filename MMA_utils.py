@@ -131,7 +131,7 @@ def x_star(lamb, q_o, L_j, v_j, alpha, x_max):
 
 def objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
     x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
-    return r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum()
+    return -(r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum())
 
 def gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
     x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
