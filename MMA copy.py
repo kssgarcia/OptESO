@@ -52,7 +52,9 @@ alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 x_j_prev = None
 x_j_after_prev = None
 
-for iter in range(20):
+compliance = []
+restriction = []
+for iter in range(100):
 
     # Check convergence
     if change < 0.01:
@@ -71,6 +73,10 @@ for iter in range(20):
     g = rhs_vec.T@disp
     d_g = sensi_el(els, UC, kloc)
 
+    # Compliance data
+    compliance.append(g)
+    restriction.append(lamb*(v_j.dot(x_j) - v_max))
+
     # Filtering the design variable to be in a feasible interval
     x_j_after_prev = x_j_prev
     x_j_prev = x_j.copy()
@@ -86,7 +92,9 @@ for iter in range(20):
             break
     print(lamb)
 
-    dual_problem = minimize(objective_function, lamb, bounds=[(0, None)], args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max))
+    dual_problem = minimize(objective_function, 
+                            lamb, bounds=[(0, None)],
+                            args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max))
     #dual_problem = minimize(objective_function, 1, bounds=[(0, None)], args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max), jac=gradient)
     lamb = dual_problem.x[0]
     print(lamb)
@@ -134,7 +142,24 @@ plt.xlabel('Lambda')
 plt.ylabel('Gradient Value')
 plt.title('Gradient Plot')
 plt.legend()
+plt.show()
 
+# Plot the compliance
+plt.figure(figsize=(10, 6))
+plt.plot(np.linspace(0,100,len(compliance)), compliance, label='Compliance', color='g')
+plt.xlabel('Iteration')
+plt.ylabel('Compliance')
+plt.title('Compliance Plot')
+plt.legend()
+plt.show()
+
+# Plot the restriction
+plt.figure(figsize=(10, 6))
+plt.plot(np.linspace(0,100,len(restriction)), restriction, label='Compliance', color='g')
+plt.xlabel('Iteration')
+plt.ylabel('Restriction')
+plt.title('Restriction Plot')
+plt.legend()
 plt.show()
 
 # %%
