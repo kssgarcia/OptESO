@@ -40,13 +40,13 @@ volfrac = 0.7
 v_j = np.ones((els.shape[0])) * volume(length, height, nx, ny)
 v_max = volume(length, height, nx, ny) * int(els.shape[0] * volfrac)
 
-x_j = np.ones(ny*nx) * 0.5 # Initialize the sensitivity
+x_j = np.ones(ny*nx) * 0.6 # Initialize the sensitivity
 x_min = np.ones(ny*nx)*1e-5 # Minimum young modulus of the material
 x_max = np.ones(ny*nx) # Maximum young modulus of the material
 lamb = 0
 penal = 3 # Penalization factor
 mu = 0.8
-s = 0.4 # S init
+s = 0.1 # S init
 L_j = x_j - s*(x_max-x_min)
 alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
 x_j_prev = None
@@ -54,6 +54,7 @@ x_j_after_prev = None
 
 compliance = []
 restriction = []
+#x_h = []
 for iter in range(100):
 
     # Check convergence
@@ -76,6 +77,7 @@ for iter in range(100):
     # Compliance data
     compliance.append(g)
     restriction.append(lamb*(v_j.dot(x_j) - v_max))
+    #x_h.append(x_j)
 
     # Filtering the design variable to be in a feasible interval
     x_j_after_prev = x_j_prev
@@ -105,16 +107,13 @@ for iter in range(100):
     change = np.linalg.norm(x_j-x_j_prev)
     print(change, '----')
 
-    # %%
     # Change the distance of the asymptotes
     if iter>1:
         sign = (x_j-x_j_prev)*(x_j_prev-x_j_after_prev)
         if np.all(sign >= 0) or np.all(sign < 0):
-            s = 1.3
-            print('here')
+            s = 1.01
         else:
-            s = 0.6
-            print('nooo')
+            s = 0.01
         L_j = x_j - s*(x_j_prev-L_j)
         alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
     
