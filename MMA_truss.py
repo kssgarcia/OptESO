@@ -24,8 +24,8 @@ nodes[maskBC_2, 3] = -1
 nodes[maskBC_2, 4] = -1
 BC = nodes[(nodes[:,-2] == -1) & (nodes[:,-1] == -1), 0]
 
-areas = np.random.uniform(low=0.1, high=1.0, size=nels)
-#areas = np.ones(nels)
+#areas = np.random.uniform(low=0.1, high=1.0, size=nels)
+areas = np.ones(nels)
 mats = np.ones((nels, 3))
 mats[:, 1] = 0.28
 mats[:, 2] = areas
@@ -34,11 +34,11 @@ change = 10
 step = 0.002
 volfrac = 0.7
 v_j = np.ones((els.shape[0])) * lengths(els, nodes)
-v_max = np.sum(mats[:,1] * lengths(els, nodes)) * volfrac
+v_max = np.sum(mats[:,2] * lengths(els, nodes)) * volfrac
 
-x_j = mats[:,1] # Initialize the sensitivity
-x_min = np.ones(els.shape[0])*1e-5 # Minimum young modulus of the material
-x_max = np.ones(els.shape[0]) # Maximum young modulus of the material
+x_j = np.ones(els.shape[0])*0.5
+x_min = np.ones(els.shape[0])*1e-5 
+x_max = np.ones(els.shape[0]) 
 lamb = 0
 penal = 3 # Penalization factor
 mu = 0.8
@@ -53,6 +53,8 @@ for i in range(1):
     if not is_equilibrium(nodes, els, mats, loads) or change < 0.01: 
         print('Volume reach.')
         break
+
+    mats[:,2] = x_min+x_j**penal*(x_max-x_min) # Update the Young modulus
 
     disp, UC, rhs_vec = fem_sol(nodes, els, mats, loads)
     stress_nodes = pos.stress_truss(nodes, els, mats, UC)
@@ -69,7 +71,7 @@ for i in range(1):
     q_o = -(x_j - L_j)**2 * d_g
     r_o = g + ((x_j - L_j) * d_g).sum()
 
-    for _ in range(1000):
+    for _ in range(100000):
         grad = gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max)
         lamb += step * grad
         if abs(grad) < 0.001:
@@ -85,12 +87,9 @@ for i in range(1):
 
 
 
-
-
-
 # %%
 # Generate a range of lambda values for the plot
-lamb_values = np.linspace(0, 10000, 1000)
+lamb_values = np.linspace(0, 100, 100)
 
 # Calculate the objective function values and gradient values for the lambda range
 objective_values = [-objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]

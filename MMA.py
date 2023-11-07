@@ -102,6 +102,19 @@ for iter in range(3):
     print(change, '----')
 
 # %%
+
+s = 0.2
+lamb = 1
+r_o = 6
+q_o = 3
+v_j = np.ones(300)*0.3
+v_max =  v_j.sum() * 0.5
+x_j = np.ones(300)*0.7
+x_min = np.ones(300)*1e-5 
+x_max = np.ones(300) 
+L_j = x_j - s*(x_max-x_min)
+alpha = np.maximum(x_min, L_j + mu*(x_j - L_j))
+
 # Generate a range of lambda values for the plot
 lamb_values = np.linspace(0, 10000, 1000)
 
