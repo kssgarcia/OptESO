@@ -25,7 +25,7 @@ nodes[maskBC_2, 4] = -1
 BC = nodes[(nodes[:,-2] == -1) & (nodes[:,-1] == -1), 0]
 
 #areas = np.random.uniform(low=0.1, high=1.0, size=nels)
-areas = np.ones(nels)
+areas = np.ones(nels)*0.7
 mats = np.ones((nels, 3))
 mats[:, 1] = 0.28
 mats[:, 2] = areas
@@ -37,7 +37,7 @@ v_j = np.ones((els.shape[0])) * lengths(els, nodes)
 v_max = np.sum(mats[:,2] * lengths(els, nodes)) * volfrac
 
 x_j = np.ones(els.shape[0])*0.5
-x_min = np.ones(els.shape[0])*1e-5 
+x_min = np.ones(els.shape[0])*1e-6 
 x_max = np.ones(els.shape[0]) 
 lamb = 0
 penal = 3 # Penalization factor
@@ -56,6 +56,7 @@ for i in range(1):
 
     mats[:,2] = x_min+x_j**penal*(x_max-x_min) # Update the Young modulus
 
+    # FEM
     disp, UC, rhs_vec = fem_sol(nodes, els, mats, loads)
     stress_nodes = pos.stress_truss(nodes, els, mats, UC)
 
@@ -84,6 +85,12 @@ for i in range(1):
     #dual_problem = minimize(objective_function, 1, bounds=[(0, None)], args=(r_o, v_max, q_o, L_j, v_j, alpha, x_max), jac=gradient)
     lamb = dual_problem.x[0]
     print(lamb)
+
+    # Calculate the design variable for the next iteration
+    x_j = x_star(lamb, L_j, q_o, v_j, alpha, x_max)
+
+    change = np.linalg.norm(x_j-x_j_prev)
+    print(change, '----')
 
 
 
