@@ -19,6 +19,7 @@ height = 40
 nx = 200
 ny= 40
 nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2) # Generate mesh
+#mats[:,2] *= 0.8
 
 E = mats[0,0] # Young modulus
 nu = mats[0,1] # Poisson ratio
@@ -40,6 +41,7 @@ volfrac = 0.7
 v_j = np.ones((els.shape[0])) * volume(length, height, nx, ny)
 v_max = volume(length, height, nx, ny) * int(els.shape[0] * volfrac)
 
+#x_j = mats[:,2]
 x_j = np.ones(ny*nx) * 0.6 # Initialize the sensitivity
 x_min = np.ones(ny*nx)*1e-5 # Minimum young modulus of the material
 x_max = np.ones(ny*nx) # Maximum young modulus of the material
@@ -55,7 +57,7 @@ x_j_after_prev = None
 compliance = []
 restriction = []
 #x_h = []
-for iter in range(100):
+for iter in range(1):
 
     # Check convergence
     if change < 0.01:
@@ -107,6 +109,7 @@ for iter in range(100):
     change = np.linalg.norm(x_j-x_j_prev)
     print(change, '----')
 
+    # %%
     # Change the distance of the asymptotes
     if iter>1:
         sign = (x_j-x_j_prev)*(x_j_prev-x_j_after_prev)
