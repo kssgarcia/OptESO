@@ -1,92 +1,98 @@
-# %% Initialization
-import matplotlib.pyplot as plt # Package for plotting
-from matplotlib import colors 
-from matplotlib import animation # Package for animation
-import numpy as np # Package for scientific computing
+# %%
+import time
+import numpy as np
+from scipy.sparse.linalg import spsolve
+import solidspy.assemutil as ass # Solidspy 1.1.0
 
-from Utils.beams import * # Functions for mesh generation
-from Utils.SIMP_utils import * # Fucntions for FEM analysis and postprocessing
-# Solidspy 1.1.0
+import matplotlib.pyplot as plt 
+from matplotlib import colors
+
+from Utils.beams import *
+from Utils.SIMP_utils import *
+
+# Start the timer
+start_time = time.time()
+
 np.seterr(divide='ignore', invalid='ignore')
 
-# Mesh
-length = 60
-height = 60
-nx = 60
-ny= 60
-nodes, mats, els, loads, BC = beam(L=length, H=height, nx=nx, ny=ny, n=2) # Generate mesh
 
-niter = 60
-centers = center_els(nodes, els) # Calculate centers
-Vi = volume(els, length, height, nx, ny) # Initial volume
+def optimization(n_elem, volfrac):
+    # Initialize variables
+    length = 60
+    height = 60
+    nx = n_elem
+    ny= n_elem
+    niter = 60
+    penal = 3 # Penalization factor
+    Emin=1e-9 # Minimum young modulus of the material
+    Emax=1.0 # Maximum young modulus of the material
 
-r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 4 # Radius for the sensitivity filter
-penal = 3 # Penalization factor
-Emin=1e-9 # Minimum young modulus of the material
-Emax=1.0 # Maximum young modulus of the material
-volfrac = 0.5 # Volume fraction
-change = 10 # Change in the design variable
-g = 0 # Constraint
+    dirs = np.array([[0,-1], [0,1], [1,0]])
+    positions = np.array([[61,30], [1,30], [30, 1]])
+    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions, n=1)
 
-rho = volfrac * np.ones(ny*nx,dtype=float) # Initialize the density
-sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
-rho_old = rho.copy() # Initialize the density history
-d_c = np.ones(ny*nx) # Initialize the design change
-d_v = np.ones(ny*nx) # Initialize the volume change
-rho_data = [] # History of the density
+    # Initialize the design variables
+    change = 10 # Change in the design variable
+    g = 0 # Constraint
+    rho = volfrac * np.ones(ny*nx, dtype=float) # Initialize the density
+    sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
+    rho_old = rho.copy() # Initialize the density history
+    d_c = np.ones(ny*nx) # Initialize the design change
 
-# %% Optimization loop
+    r_min = np.linalg.norm(nodes[0,1:3] - nodes[1,1:3]) * 4 # Radius for the sensitivity filter
+    centers = center_els(nodes, els) # Calculate centers
+    E = mats[0,0] # Young modulus
+    nu = mats[0,1] # Poisson ratio
+    k = np.array([1/2-nu/6,1/8+nu/8,-1/4-nu/12,-1/8+3*nu/8,-1/4+nu/12,-1/8-nu/8,nu/6,1/8-3*nu/8]) # Coefficients
+    kloc = E/(1-nu**2)*np.array([ [k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7]], 
+    [k[1], k[0], k[7], k[6], k[5], k[4], k[3], k[2]],
+    [k[2], k[7], k[0], k[5], k[6], k[3], k[4], k[1]],
+    [k[3], k[6], k[5], k[0], k[7], k[2], k[1], k[4]],
+    [k[4], k[5], k[6], k[7], k[0], k[1], k[2], k[3]],
+    [k[5], k[4], k[3], k[2], k[1], k[0], k[7], k[6]],
+    [k[6], k[3], k[4], k[1], k[2], k[7], k[0], k[5]],
+    [k[7], k[2], k[1], k[4], k[3], k[6], k[5], k[0]]]); # Local stiffness matrix
+    assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8) 
 
-for i in range(niter):
+    iter = 0
+    for _ in range(niter):
+        iter += 1
 
-    if change < 0.01:
-        print('Convergence reached')
-        break
+        # Check convergence
+        if change < 0.01:
+            print('Convergence reached')
+            break
 
-    mats[:,2] = Emin+rho**penal*(Emax-Emin) # Update the Young modulus
+        # Change density 
+        mats[:,2] = Emin+rho**penal*(Emax-Emin)
 
-    IBC, UG, rhs_vec = preprocessing(nodes, mats, els, loads) # Calculate boundary conditions and global stiffness matrix
-    UC, *_ = postprocessing(nodes, mats[:,:2], els, IBC, UG, strain_sol=False) # Calculate displacements
+        # System assembly
+        stiff_mat = sparse_assem(els, mats, neq, assem_op, kloc)
+        rhs_vec = ass.loadasem(loads, bc_array, neq)
 
-    # Sensitivity analysis
-    sensi_rho[:] = sensitivity_els(nodes, mats, els, UC, nx, ny) # Calculate the sensitivity
-    obj = ((Emin+rho**penal*(Emax-Emin))*sensi_rho).sum() # Calculate the objective function
-    d_c[:] = (-penal*rho**(penal-1)*(Emax-Emin))*sensi_rho # Calculate the design change
-    d_v[:] = np.ones(ny*nx) # Calculate the volume change
-    d_c[:] = density_filter(centers, r_min, rho, d_c) # Perform the sensitivity filter
+        # System solution
+        disp = spsolve(stiff_mat, rhs_vec)
+        UC = pos.complete_disp(bc_array, nodes, disp)
 
-    # Optimality criteria
-    rho_old[:] = rho # Save the old density
-    rho[:], g = optimality_criteria(nx, ny, rho, d_c, d_v, g) # Update the density
+        compliance = rhs_vec.T.dot(disp)
 
-    change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf) # Calculate the change
+        # Sensitivity analysis
+        sensi_rho[:] = (np.dot(UC[els[:,-4:]].reshape(nx*ny,8),kloc) * UC[els[:,-4:]].reshape(nx*ny,8) ).sum(1)
+        d_c[:] = (-penal*rho**(penal-1)*(Emax-Emin))*sensi_rho
+        d_c[:] = density_filter(centers, r_min, rho, d_c)
 
-    if i%5 == 0:
-        rho_data.append(-rho.reshape((ny, nx))) # Save the density
+        # Optimality criteria
+        rho_old[:] = rho
+        rho[:], g = optimality_criteria(nx, ny, rho, d_c, g)
 
-    # Write iteration history to screen (req. Python 2.6 or newer)
-    print("it.: {0} , obj.: {1:.3f} Vol.: {2:.3f}, ch.: {3:.3f}".format(i,obj,(g+volfrac*nx*ny)/(nx*ny),change))
+        # Compute the change
+        change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
-# %% Animation
-fig, ax = plt.subplots()
-im = ax.imshow(np.zeros((ny,nx)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+    plt.ion() 
+    fig,ax = plt.subplots()
+    ax.imshow(-rho.reshape(n_elem,n_elem), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+    ax.set_title('Predicted')
+    fig.show()
 
-def update(frame):
-    rho_frame = rho_data[frame]
-    im.set_array(rho_frame)
-    return im,
-ani = animation.FuncAnimation(fig, update, frames=len(rho_data), interval=200, blit=True)
-output_file = "animation.gif"
-ani.save(output_file, writer="pillow")
-
-# %% Plot
-plt.ion() 
-fig,ax = plt.subplots()
-im = ax.imshow(-rho.reshape(ny, nx), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-fig.show()
-
-# %%
-plt.figure()
-plt.scatter(centers[:,0], centers[:,1], c=-rho, cmap='gray')
-plt.colorbar()
-plt.axis("image");
+if __name__ == "__main__":
+    optimization(60, 0.6)

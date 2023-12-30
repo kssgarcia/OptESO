@@ -21,10 +21,10 @@ def is_equilibrium(nodes, elements, mats, loads):
     ----------
     nodes : ndarray
         Array with models nodes
+    elements : ndarray
+        Array with models elements
     mats : ndarray
         Array with models materials
-    els : ndarray
-        Array with models elements
     loads : ndarray
         Array with models loads
         
@@ -48,36 +48,24 @@ def sparse_assem(elements, mats, nodes, neq, assem_op):
     Assembles the global stiffness matrix
     using a sparse storing scheme
 
-    The scheme used to assemble is COOrdinate list (COO), and
-    it converted to Compressed Sparse Row (CSR) afterward
-    for the solution phase [1]_.
-
     Parameters
     ----------
     elements : ndarray (int)
       Array with the number for the nodes in each element.
-    mats    : ndarray (float)
+    mats : ndarray (float)
       Array with the material profiles.
-    nodes    : ndarray (float)
+    nodes : ndarray (float)
       Array with the nodal numbers and coordinates.
-    assem_op : ndarray (int)
-      Assembly operator.
     neq : int
       Number of active equations in the system.
-    uel : callable function (optional)
-      Python function that returns the local stiffness matrix.
+    assem_op : ndarray (int)
+      Assembly operator.
 
     Returns
     -------
-    kglob : sparse matrix (float)
+    stiff : sparse matrix (float)
       Array with the global stiffness matrix in a sparse
       Compressed Sparse Row (CSR) format.
-
-    References
-    ----------
-    .. [1] Sparse matrix. (2017, March 8). In Wikipedia,
-        The Free Encyclopedia.
-        https://en.wikipedia.org/wiki/Sparse_matrix
 
     """
     rows = []
@@ -120,8 +108,12 @@ def fem_sol(nodes, els, mats, loads):
 
     Returns
     -------
-    disp_comp : array
+    disp : array
         Displacement for each node.
+    UC : array
+        Complete displacement vector.
+    rhs_vec : array
+        Load vector.
     """
     assem_op, bc_array, neq = ass.DME(nodes[:,-2:], els)
     stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op)
@@ -134,15 +126,18 @@ def fem_sol(nodes, els, mats, loads):
 
 def lengths(els, nodes):
     """
-    Compute the volume of the truss
+    Compute element's lengths.
+
     Parameters
     -------
-    nodes: ndarray
-        Array with models nodes
     els: ndarray
-        Array with els information.
+        Array with elements information.
+    nodes: ndarray
+        Array with nodes information
     Return
     -------
+    lengths: ndarray
+        Array with nodes information
     """
     ini = els[:, 3]
     end = els[:, 4]
@@ -151,8 +146,31 @@ def lengths(els, nodes):
 
 def grid_truss(length, height, nx, ny):
     """
-    Generate a grid made of vertical, horizontal and diagonal
-    members
+    Generates a grid of nodes and elements representing a truss structure.
+
+    Parameters
+    ----------
+    length : float
+        Length of the truss
+    height : float
+        Height of the truss
+    nx : int
+        Number of nodes in the x direction
+    ny : int
+        Number of nodes in the y direction
+
+    Returns
+    -------
+    nodes : ndarray
+        Array of nodes
+    elements : ndarray
+        Array of elements
+    nels : int
+        Total number of elements
+    x : ndarray
+        x-coordinates of the nodes
+    y : ndarray
+        y-coordinates of the nodes
     """
     nels = (nx - 1)*ny +  (ny - 1)*nx + 2*(nx - 1)*(ny - 1)
     x, y, _ = rect_grid(length, height, nx - 1, ny - 1)
@@ -178,7 +196,21 @@ def grid_truss(length, height, nx, ny):
 
 def plot_truss(nodes, elements, mats, stresses, tol=1e-5):
     """
-    Plot a truss and encodes the stresses in a colormap
+    Plots a truss and encodes the stresses in a colormap.
+
+    Parameters
+    ----------
+    nodes : ndarray
+        Array of nodes
+    elements : ndarray
+        Array of elements
+    mats : ndarray
+        Array of material properties
+    stresses : ndarray
+        Array of stresses
+    tol : float, optional
+        Tolerance for considering a stress as zero, by default 1e-5
+
     """
     mask = (mats[:,1]==1e-8)
     if mask.sum() > 0:
@@ -207,10 +239,18 @@ def plot_truss(nodes, elements, mats, stresses, tol=1e-5):
 
 def plot_truss_del(nodes, elements, mats, stresses):
     """
-    nodes: ndarray
+    Plots a truss with all elements colored red, regardless of stress.
+
+    Parameters
+    ----------
+    nodes : ndarray
         Array with models nodes
-    nodes: ndarray
-        Array with models nodes
+    elements : ndarray
+        Array with models elements
+    mats : ndarray
+        Array of material properties
+    stresses : ndarray
+        Array of stresses
     """
     max_stress = max(-stresses.min(), stresses.max())
     scaled_stress = 0.5*(stresses + max_stress)/max_stress
@@ -294,12 +334,12 @@ def sensi_el(els, mats, nodes, UC):
     
     Parameters
     ----------
+    els : ndarray
+        Array with models elements
     nodes : ndarray
         Array with models nodes
     mats : ndarray
         Array with models materials
-    els : ndarray
-        Array with models elements
     UC : ndarray
         Displacements at nodes
 
@@ -321,14 +361,91 @@ def sensi_el(els, mats, nodes, UC):
     return sensi_number
 
 def x_star(lamb, q_o, L_j, v_j, alpha, x_max):
+    """
+    Calculates the optimal x value (x_star) for a given lambda.
+
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    x_star: float
+        Optimal x value (x_star)
+    """
     x_t = L_j + np.sqrt(q_o / (lamb * v_j))
     x_star = np.clip(x_t, alpha, x_max)
     return x_star
 
 def objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
-    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
-    return -(r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum())
+    """
+    Calculates the value of the objective function for a given lambda.
 
-def gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    r_o : float
+        Initial value of r
+    v_max : float
+        Maximum possible value for v
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    obj : float
+        Value of the objective function
+    """
     x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
-    return (v_j * x_star_value).sum() - v_max
+    obj = -(r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum())
+    return obj
+
+def gradient(lamb, v_max, q_o, L_j, v_j, alpha, x_max):
+    """
+    Calculates the gradient of the objective function for a given lambda.
+
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    v_max : float
+        Maximum possible value for v
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    grad : float
+        Gradient of the objective function
+    """
+    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
+    grad = (v_j * x_star_value).sum() - v_max
+    return grad

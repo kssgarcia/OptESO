@@ -5,14 +5,10 @@ from scipy.sparse.linalg import spsolve
 from scipy.spatial.distance import cdist
 
 
-def sparse_assem(elements, mats, nodes, neq, assem_op, kloc):
+def sparse_assem(elements, mats, neq, assem_op, kloc):
     """
     Assembles the global stiffness matrix
     using a sparse storing scheme
-
-    The scheme used to assemble is COOrdinate list (COO), and
-    it converted to Compressed Sparse Row (CSR) afterward
-    for the solution phase [1]_.
 
     Parameters
     ----------
@@ -20,26 +16,18 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, kloc):
       Array with the number for the nodes in each element.
     mats    : ndarray (float)
       Array with the material profiles.
-    nodes    : ndarray (float)
-      Array with the nodal numbers and coordinates.
-    assem_op : ndarray (int)
-      Assembly operator.
     neq : int
       Number of active equations in the system.
-    uel : callable function (optional)
-      Python function that returns the local stiffness matrix.
+    assem_op : ndarray (int)
+      Assembly operator.
+    kloc : ndarray 
+      Stiffness matrix of a single element
 
     Returns
     -------
-    kglob : sparse matrix (float)
+    stiff : sparse matrix (float)
       Array with the global stiffness matrix in a sparse
       Compressed Sparse Row (CSR) format.
-
-    References
-    ----------
-    .. [1] Sparse matrix. (2017, March 8). In Wikipedia,
-        The Free Encyclopedia.
-        https://en.wikipedia.org/wiki/Sparse_matrix
 
     """
     rows = []
@@ -70,14 +58,12 @@ def sensi_el(els, UC, kloc):
     
     Parameters
     ----------
-    nodes : ndarray
-        Array with models nodes
-    mats : ndarray
-        Array with models materials
     els : ndarray
         Array with models elements
     UC : ndarray
         Displacements at nodes
+    kloc : ndarray 
+      Stiffness matrix of a single element
 
     Returns
     -------
@@ -101,8 +87,6 @@ def volume(length, height, nx, ny):
     
     Parameters
     ----------
-    els : ndarray
-        Array with models elements.
     length : ndarray
         Length of the beam.
     height : ndarray
@@ -115,7 +99,7 @@ def volume(length, height, nx, ny):
     Return 
     ----------
     V: float
-
+        Volume of a single element.
     """
 
     dy = length / nx
@@ -125,14 +109,91 @@ def volume(length, height, nx, ny):
     return V
 
 def x_star(lamb, q_o, L_j, v_j, alpha, x_max):
+    """
+    Calculates the optimal x value (x_star) for a given lambda.
+
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    x_star: float
+        Optimal x value (x_star)
+    """
     x_t = L_j + np.sqrt(q_o / (lamb * v_j))
     x_star = np.clip(x_t, alpha, x_max)
     return x_star
 
 def objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
-    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
-    return -(r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum())
+    """
+    Calculates the value of the objective function for a given lambda.
 
-def gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max):
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    r_o : float
+        Initial value of r
+    v_max : float
+        Maximum possible value for v
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    obj : float
+        Value of the objective function
+    """
     x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
-    return (v_j * x_star_value).sum() - v_max
+    obj = -(r_o - lamb*v_max + (q_o/(x_star_value-L_j) + lamb*v_j*x_star_value).sum())
+    return obj
+
+def gradient(lamb, v_max, q_o, L_j, v_j, alpha, x_max):
+    """
+    Calculates the gradient of the objective function for a given lambda.
+
+    Parameters
+    ----------
+    lamb : float
+        Lambda value
+    v_max : float
+        Maximum possible value for v
+    q_o : float
+        Initial value of q
+    L_j : float
+        Lower bound for x
+    v_j : float
+        Coefficient for the x term
+    alpha : float
+        Minimum possible value for x
+    x_max : float
+        Maximum possible value for x
+
+    Returns
+    -------
+    grad : float
+        Gradient of the objective function
+    """
+    x_star_value = x_star(lamb, q_o, L_j, v_j, alpha, x_max)
+    grad = (v_j * x_star_value).sum() - v_max
+    return grad

@@ -91,9 +91,9 @@ def postprocessing(nodes, mats, els, bc_array, disp):
         Array with models materials
     els : ndarray
         Array with models elements
-    IBC : ndarray 
+    bc_array : ndarray 
         Boundary conditions array
-    UG : ndarray 
+    disp : ndarray 
         Static solve.
         
     Returns
@@ -174,10 +174,11 @@ def volume(els, length, height, nx, ny):
     nx : float
 
     ny : float
+
     Return 
     ----------
     V: float
-
+        Volume of the beam.
     """
 
     dy = length / nx
