@@ -2,6 +2,8 @@ Truss
 truss_opt
 .ipynb_checkpoints
 MyTrussOpt
+Benchmark
+3D_case
 __pycache__/
 *.py[cod]
 test
