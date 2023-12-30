@@ -8,3 +8,4 @@ Benchmark
 __pycache__/
 *.py[cod]
 test
+MMA_copy.py

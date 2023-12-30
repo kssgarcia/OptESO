@@ -11,7 +11,7 @@ from Utils.MMA_utils import * # Fucntions for FEM analysis and postprocessing
 # Solidspy 1.1.0
 np.seterr(divide='ignore', invalid='ignore')
 
-def optimization():
+def optimization_MMA():
     length = 160
     height = 40
     nx = 200
@@ -151,3 +151,8 @@ result = list(map(q, lam))
 plt.figure()
 plt.plot(lam, result)
 plt.show()
+
+
+
+if __name__ == "__main__":
+    optimization_MMA()

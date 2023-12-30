@@ -8,7 +8,7 @@ from Utils.BESO_utils import * # Fucntions for FEM analysis and postprocessing
 import solidspy.postprocesor as pos # SolidsPy package for postprocessing
 np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error
 
-def optimization():
+def optimization_BESO():
     length = 20
     height = 10
     nx = 50
@@ -104,4 +104,4 @@ def optimization():
 
 
 if __name__ == "__main__":
-    optimization()
+    optimization_BESO()

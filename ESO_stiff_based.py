@@ -9,7 +9,7 @@ from Utils.beams import * # Functions for mesh generation
 import solidspy.postprocesor as pos # SolidsPy package for postprocessing
 np.seterr(divide='ignore', invalid='ignore') # Ignore division by zero error
 
-def optimization():
+def optimization_ESO_stiff():
     length = 60
     height = 60
     nx = 60
@@ -60,4 +60,4 @@ def optimization():
     plt.axis("image");
 
 if __name__ == "__main__":
-    optimization()
+    optimization_ESO_stiff()

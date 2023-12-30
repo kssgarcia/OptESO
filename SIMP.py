@@ -16,7 +16,7 @@ start_time = time.time()
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def optimization(n_elem, volfrac):
+def optimization_SIMP(n_elem, volfrac):
     # Initialize variables
     length = 60
     height = 60
@@ -95,4 +95,4 @@ def optimization(n_elem, volfrac):
     fig.show()
 
 if __name__ == "__main__":
-    optimization(60, 0.6)
+    optimization_SIMP(60, 0.6)

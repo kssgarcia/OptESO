@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import solidspy.assemutil as ass
 from scipy.optimize import minimize
 
-def optimization():
+def optimization_MMA_truss():
     length = 6
     height = 3
     nx = 11
@@ -125,4 +125,4 @@ def optimization():
     plt.show()
 
 if __name__ == "__main__":
-    optimization()
+    optimization_MMA_truss()
