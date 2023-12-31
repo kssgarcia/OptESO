@@ -125,4 +125,5 @@ def optimization_MMA_truss():
     plt.show()
 
 if __name__ == "__main__":
-    optimization_MMA_truss()
+    pass
+    #optimization_MMA_truss()

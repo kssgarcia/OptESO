@@ -107,6 +107,7 @@ def optimization_MMA():
 
 s = 0.2
 lamb = 1
+mu = 0.8
 r_o = 6
 q_o = 3
 v_j = np.ones(300)*0.3
@@ -122,7 +123,7 @@ lamb_values = np.linspace(0, 10000, 1000)
 
 # Calculate the objective function values and gradient values for the lambda range
 objective_values = [-objective_function(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
-gradient_values = [gradient(lamb, r_o, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
+gradient_values = [gradient(lamb, v_max, q_o, L_j, v_j, alpha, x_max) for lamb in lamb_values]
 
 # Plot the objective function
 plt.figure(figsize=(10, 6))
@@ -155,4 +156,5 @@ plt.show()
 
 
 if __name__ == "__main__":
-    optimization_MMA()
+    pass
+    #optimization_MMA()

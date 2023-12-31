@@ -95,4 +95,5 @@ def optimization_SIMP(n_elem, volfrac):
     fig.show()
 
 if __name__ == "__main__":
-    optimization_SIMP(60, 0.6)
+    pass
+    #optimization_SIMP(60, 0.6)

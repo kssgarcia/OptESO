@@ -60,4 +60,5 @@ def optimization_ESO_stiff():
     plt.axis("image");
 
 if __name__ == "__main__":
-    optimization_ESO_stiff()
+    pass
+    #optimization_ESO_stiff()

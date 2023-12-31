@@ -104,4 +104,5 @@ def optimization_BESO():
 
 
 if __name__ == "__main__":
-    optimization_BESO()
+    pass
+    #optimization_BESO()

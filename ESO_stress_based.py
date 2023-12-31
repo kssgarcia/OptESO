@@ -59,4 +59,5 @@ def optimization_ESO_stress():
     plt.axis("image");
 
 if __name__ == "__main__":
-    optimization_ESO_stress()
+    pass
+    #optimization_ESO_stress()
