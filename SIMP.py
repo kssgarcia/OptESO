@@ -16,7 +16,7 @@ start_time = time.time()
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def optimization_SIMP(n_elem, volfrac):
+def optimization_SIMP(n_elem):
     # Initialize variables
     length = 60
     height = 60
@@ -34,7 +34,7 @@ def optimization_SIMP(n_elem, volfrac):
     # Initialize the design variables
     change = 10 # Change in the design variable
     g = 0 # Constraint
-    rho = volfrac * np.ones(ny*nx, dtype=float) # Initialize the density
+    rho = 0.5 * np.ones(ny*nx, dtype=float) # Initialize the density
     sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
     rho_old = rho.copy() # Initialize the density history
     d_c = np.ones(ny*nx) # Initialize the design change
@@ -96,4 +96,4 @@ def optimization_SIMP(n_elem, volfrac):
 
 if __name__ == "__main__":
     pass
-    #optimization_SIMP(60, 0.6)
+    #optimization_SIMP(60)
