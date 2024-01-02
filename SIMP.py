@@ -29,7 +29,7 @@ def optimization_SIMP(n_elem):
 
     dirs = np.array([[0,-1], [0,1], [1,0]])
     positions = np.array([[61,30], [1,30], [30, 1]])
-    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions, n=1)
+    nodes, mats, els, loads, _ = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions, n=1)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
@@ -95,5 +95,4 @@ def optimization_SIMP(n_elem):
     fig.show()
 
 if __name__ == "__main__":
-    pass
-    #optimization_SIMP(60)
+    optimization_SIMP(60)
